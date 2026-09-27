@@ -1,3 +1,4 @@
+import type { AnalysisPeriod, StockAnalysisResponse } from '@/types/analysis';
 import type {
   Account,
   Activity,
@@ -262,6 +263,12 @@ export const getCorporateActions = (symbol: string, types?: string) =>
   request<CorporateAction[] | { corporate_actions?: CorporateAction[] }>(
     `/market/corporate-actions/${encodeURIComponent(symbol)}${toQuery({ types })}`
   );
+
+export async function getStockAnalysis(symbol: string, period: AnalysisPeriod = '1Y') {
+  return request<StockAnalysisResponse>(
+    `/analysis/${encodeURIComponent(symbol)}${toQuery({ period })}`
+  );
+}
 
 export const getForex = (pair?: string) =>
   request<ForexRate | ForexRate[] | { rates?: ForexRate[] }>(`/market/forex${toQuery({ pair })}`);

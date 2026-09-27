@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileBarChart } from 'lucide-react';
 import { getAsset, getSnapshot, getLatestQuote, getLatestTrade, getLatestBar } from '@/services/api';
 import type { Asset, Snapshot, Quote, Trade, Bar } from '@/types/trading';
 import { Card, CardHeader, LoadingState, ErrorState } from '@/components/common/UI';
@@ -74,10 +74,19 @@ export function AssetDetails() {
 
   return (
     <div className="space-y-6 p-6">
-      <Link to="/markets" className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-sky-400">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Markets
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/markets" className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-sky-400">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Markets
+        </Link>
+        <Link
+          to={`/analysis/${symbol}`}
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-sky-700 hover:text-sky-400"
+        >
+          <FileBarChart className="h-4 w-4" />
+          Research Report
+        </Link>
+      </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

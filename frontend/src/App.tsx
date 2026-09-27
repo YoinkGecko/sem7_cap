@@ -8,6 +8,7 @@ import { Portfolio } from '@/pages/Portfolio';
 import { Orders } from '@/pages/Orders';
 import { Watchlists } from '@/pages/Watchlists';
 import { Settings } from '@/pages/Settings';
+import { StockAnalysis } from '@/pages/StockAnalysis';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/markets" element={<Markets />} />
             <Route path="/markets/:symbol" element={<AssetDetails />} />
+            <Route path="/analysis/:symbol" element={<StockAnalysis />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/watchlists" element={<Watchlists />} />
