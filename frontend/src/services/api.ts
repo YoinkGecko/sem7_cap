@@ -20,6 +20,13 @@ import type {
   Watchlist,
   CreateWatchlistRequest,
 } from '@/types/trading';
+import {
+  normalizeLatestBar,
+  normalizeLatestQuote,
+  normalizeLatestTrade,
+  normalizeScreener,
+  normalizeSnapshot,
+} from '@/utils/marketData';
 
 export type {
   Account,
@@ -187,29 +194,69 @@ export const getQuotes = (symbol: string, params?: { start?: string }) =>
 export const getTrades = (symbol: string, params?: { start?: string }) =>
   request<Trade[] | { trades?: Trade[] }>(`/market/trades/${encodeURIComponent(symbol)}${toQuery(params as Record<string, unknown>)}`);
 
-export const getLatestBar = (symbol: string) =>
-  request<Bar>(`/market/latest-bar/${encodeURIComponent(symbol)}`);
+export async function getLatestBar(symbol: string): Promise<Bar | null> {
+  const data = await request<unknown>(`/market/latest-bar/${encodeURIComponent(symbol)}`);
+  return normalizeLatestBar(data);
+}
 
-export const getLatestQuote = (symbol: string) =>
-  request<Quote>(`/market/latest-quote/${encodeURIComponent(symbol)}`);
+export async function getLatestQuote(symbol: string): Promise<Quote | null> {
+  const data = await request<unknown>(`/market/latest-quote/${encodeURIComponent(symbol)}`);
+  return normalizeLatestQuote(data);
+}
 
-export const getLatestTrade = (symbol: string) =>
-  request<Trade>(`/market/latest-trade/${encodeURIComponent(symbol)}`);
+export async function getLatestTrade(symbol: string): Promise<Trade | null> {
+  const data = await request<unknown>(`/market/latest-trade/${encodeURIComponent(symbol)}`);
+  return normalizeLatestTrade(data);
+}
 
-export const getSnapshot = (symbol: string) =>
-  request<Snapshot>(`/market/snapshot/${encodeURIComponent(symbol)}`);
+export async function getSnapshot(symbol: string): Promise<Snapshot> {
+  const data = await request<unknown>(`/market/snapshot/${encodeURIComponent(symbol)}`);
+  return normalizeSnapshot(data);
+}
 
-export const getMostActives = () =>
-  request<ScreenerItem[] | { most_actives?: ScreenerItem[] }>(`/market/screener/most-actives`);
+export async function getMostActives(): Promise<ScreenerItem[]> {
+  const data = await request<unknown>(`/market/screener/most-actives`);
+  return normalizeScreener(data);
+}
 
-export const getMovers = () =>
-  request<ScreenerItem[] | { movers?: ScreenerItem[] }>(`/market/screener/movers`);
+export async function getMovers(): Promise<ScreenerItem[]> {
+  const data = await request<unknown>(`/market/screener/movers`);
+  return normalizeScreener(data);
+}
 
 export const getMarketClock = () => request<MarketClock>('/market/clock');
 export const getMarketCalendar = () => request<MarketCalendar[] | { calendar?: MarketCalendar[] }>('/market/calendar');
 
-export const getNews = (symbol: string) =>
-  request<NewsArticle[] | { news?: NewsArticle[] }>(`/market/news/${encodeURIComponent(symbol)}`);
+export async function getNews(symbol: string): Promise<{
+  articles: NewsArticle[];
+  source?: string;
+  model?: string;
+  notice?: string;
+  fallback?: string;
+  stale?: boolean;
+}> {
+  const data = await request<unknown>(`/market/news/${encodeURIComponent(symbol)}`);
+  const obj = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+  return {
+    articles: normalizeNewsArticles(data),
+    source: typeof obj?.source === 'string' ? obj.source : undefined,
+    model: typeof obj?.model === 'string' ? obj.model : undefined,
+    notice: typeof obj?.notice === 'string' ? obj.notice : undefined,
+    fallback: typeof obj?.fallback === 'string' ? obj.fallback : undefined,
+    stale: obj?.stale === true,
+  };
+}
+
+function normalizeNewsArticles(data: unknown): NewsArticle[] {
+  if (Array.isArray(data)) return data as NewsArticle[];
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    for (const key of ['news', 'data', 'results']) {
+      if (Array.isArray(obj[key])) return obj[key] as NewsArticle[];
+    }
+  }
+  return [];
+}
 
 export const getCorporateActions = (symbol: string, types?: string) =>
   request<CorporateAction[] | { corporate_actions?: CorporateAction[] }>(
@@ -236,26 +283,47 @@ export const getOptionsLatestQuotes = (symbol: string) =>
 // Watchlists
 // ============================================================
 
-export const getWatchlists = () => request<Watchlist[]>('/watchlists');
+function normalizeWatchlist(watchlist: Watchlist): Watchlist {
+  return {
+    ...watchlist,
+    symbols: Array.isArray(watchlist.symbols) ? watchlist.symbols : [],
+  };
+}
 
-export const createWatchlist = (data: CreateWatchlistRequest) =>
-  request<Watchlist>('/watchlists', {
+export async function getWatchlists(): Promise<Watchlist[]> {
+  const data = await request<Watchlist[] | { watchlists?: Watchlist[] }>('/watchlists');
+  const lists = Array.isArray(data) ? data : data.watchlists ?? [];
+  return lists.map(normalizeWatchlist);
+}
+
+export async function createWatchlist(data: CreateWatchlistRequest): Promise<Watchlist> {
+  const watchlist = await request<Watchlist>('/watchlists', {
     method: 'POST',
     body: JSON.stringify({ name: data.name, symbols: data.symbols || [] }),
   });
+  return normalizeWatchlist(watchlist);
+}
 
-export const getWatchlist = (id: string) =>
-  request<Watchlist>(`/watchlists/${encodeURIComponent(id)}`);
+export async function getWatchlist(id: string): Promise<Watchlist> {
+  const watchlist = await request<Watchlist>(`/watchlists/${encodeURIComponent(id)}`);
+  return normalizeWatchlist(watchlist);
+}
 
-export const addToWatchlist = (id: string, symbol: string) =>
-  request<Watchlist>(`/watchlists/${encodeURIComponent(id)}/${encodeURIComponent(symbol)}`, {
-    method: 'POST',
-  });
+export async function addToWatchlist(id: string, symbol: string): Promise<Watchlist> {
+  const watchlist = await request<Watchlist>(
+    `/watchlists/${encodeURIComponent(id)}/${encodeURIComponent(symbol)}`,
+    { method: 'POST' }
+  );
+  return normalizeWatchlist(watchlist);
+}
 
-export const removeFromWatchlist = (id: string, symbol: string) =>
-  request<Watchlist>(`/watchlists/${encodeURIComponent(id)}/${encodeURIComponent(symbol)}`, {
-    method: 'DELETE',
-  });
+export async function removeFromWatchlist(id: string, symbol: string): Promise<Watchlist> {
+  const watchlist = await request<Watchlist>(
+    `/watchlists/${encodeURIComponent(id)}/${encodeURIComponent(symbol)}`,
+    { method: 'DELETE' }
+  );
+  return normalizeWatchlist(watchlist);
+}
 
 export const deleteWatchlist = (id: string) =>
   request<void>(`/watchlists/${encodeURIComponent(id)}`, { method: 'DELETE' });

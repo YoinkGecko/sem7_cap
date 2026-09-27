@@ -162,7 +162,7 @@ export function Watchlists() {
                 }
               />
               <div className="p-4">
-                {wl.symbols?.length === 0 ? (
+                {!(wl.symbols?.length) ? (
                   <EmptyState message="No symbols in this watchlist" />
                 ) : (
                   <div className="overflow-x-auto">
@@ -177,7 +177,7 @@ export function Watchlists() {
                         </tr>
                       </thead>
                       <tbody>
-                        {wl.symbols!.map((sym) => {
+                        {wl.symbols.map((sym) => {
                           const snap = wlSnaps[sym];
                           const price = toNum(snap?.latest_trade?.p ?? snap?.latest_trade?.price ?? snap?.price);
                           const change = toNum(snap?.change ?? snap?.day_change);

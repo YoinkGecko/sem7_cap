@@ -1,5 +1,6 @@
 import express from "express";
 import { runCommand } from "../config/command.js";
+import { fetchStockNews } from "../services/stockNews.js";
 
 const router = express.Router();
 
@@ -290,17 +291,13 @@ router.get(
 // GET /api/market/news/AAPL
 router.get("/news/:symbol", async (req, res) => {
   try {
-    const result = await runCommand([
-      "data",
-      "news",
-      "--symbol",
-      req.params.symbol
-    ]);
-
-    res.json(JSON.parse(result));
+    const payload = await fetchStockNews(req.params.symbol);
+    res.json(payload);
   } catch (error) {
     res.status(500).json({
-      error: error.message
+      error: error.message,
+      hint:
+        "Reduce Gemini usage (NEWS_PROVIDER=alpaca) or wait for quota reset. See .env.example.",
     });
   }
 });

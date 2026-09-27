@@ -1,14 +1,49 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getMovers, getMostActives, type ScreenerItem } from '@/services/api';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getMovers, getMostActives, getSnapshot, type ScreenerItem } from '@/services/api';
 import { Card, CardHeader, LoadingState, ErrorState, EmptyState } from '@/components/common/UI';
-import { fmtCurrency, fmtPercent, fmtLargeNumber, pctColor } from '@/utils/format';
+import { fmtCurrency, fmtPercent, fmtLargeNumber, pctColor, toNum } from '@/utils/format';
+import { screenerChange, screenerChangePct, screenerPrice } from '@/utils/marketData';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search } from 'lucide-react';
+import { Search, LineChart } from 'lucide-react';
+
+function dedupeBySymbol(items: ScreenerItem[]): ScreenerItem[] {
+  const map = new Map<string, ScreenerItem>();
+  for (const item of items) {
+    const sym = item.symbol?.toUpperCase();
+    if (!sym) continue;
+    const prev = map.get(sym);
+    map.set(sym, prev ? { ...prev, ...item, symbol: sym } : { ...item, symbol: sym });
+  }
+  return Array.from(map.values());
+}
+
+async function enrichWithSnapshots(items: ScreenerItem[]): Promise<ScreenerItem[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      if (!item.symbol) return item;
+      const price = screenerPrice(item);
+      const changePct = screenerChangePct(item);
+      if (price != null && changePct != null) return item;
+
+      try {
+        const snap = await getSnapshot(item.symbol);
+        return {
+          ...item,
+          price: price ?? snap.price ?? toNum(snap.latest_trade?.p ?? snap.latest_trade?.price),
+          change: screenerChange(item) ?? snap.change ?? snap.day_change,
+          change_pct: changePct ?? snap.change_pct ?? snap.day_change_pct,
+        };
+      } catch {
+        return item;
+      }
+    })
+  );
+}
 
 export function Markets() {
-  const [movers, setMovers] = useState<ScreenerItem[]>([]);
-  const [actives, setActives] = useState<ScreenerItem[]>([]);
+  const navigate = useNavigate();
+  const [items, setItems] = useState<ScreenerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -18,12 +53,12 @@ export function Markets() {
     setLoading(true);
     setError(null);
     try {
-      const [m, a] = await Promise.all([
-        getMovers().catch(() => []),
-        getMostActives().catch(() => []),
+      const [movers, actives] = await Promise.all([
+        getMovers().catch(() => [] as ScreenerItem[]),
+        getMostActives().catch(() => [] as ScreenerItem[]),
       ]);
-      setMovers(normalizeScreener(m));
-      setActives(normalizeScreener(a));
+      const merged = dedupeBySymbol([...movers, ...actives]);
+      setItems(await enrichWithSnapshots(merged));
     } catch {
       setError('Unable to load market data.');
     } finally {
@@ -31,23 +66,32 @@ export function Markets() {
     }
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => {
+    fetch();
+  }, []);
 
-  const allItems = [...movers, ...actives];
-  const filtered = debouncedQuery
-    ? allItems.filter((item) => {
-        const sym = (item.symbol || '').toLowerCase();
-        const name = (item.name || '').toLowerCase();
-        const q = debouncedQuery.toLowerCase();
-        return sym.includes(q) || name.includes(q);
-      })
-    : allItems;
+  const filtered = useMemo(() => {
+    if (!debouncedQuery) return items;
+    const q = debouncedQuery.toLowerCase();
+    return items.filter((item) => {
+      const sym = (item.symbol || '').toLowerCase();
+      const name = (item.name || '').toLowerCase();
+      return sym.includes(q) || name.includes(q);
+    });
+  }, [items, debouncedQuery]);
+
+  const openSymbol = (symbol: string) => {
+    if (!symbol) return;
+    navigate(`/markets/${symbol}`);
+  };
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-lg font-semibold text-neutral-100">Markets</h1>
-        <p className="text-sm text-neutral-500 mt-0.5">Explore stocks, movers, and most active securities</p>
+        <p className="text-sm text-neutral-500 mt-0.5">
+          Explore stocks, movers, and most active securities. Click a row to open the chart and trade.
+        </p>
       </div>
 
       <div className="relative max-w-md">
@@ -62,7 +106,7 @@ export function Markets() {
       </div>
 
       <Card>
-        <CardHeader title="Stocks" subtitle={`${filtered.length} results`} />
+        <CardHeader title="Stocks" subtitle={`${filtered.length} results · select a symbol for 1Y chart & trading`} />
         {loading ? (
           <LoadingState />
         ) : error ? (
@@ -80,25 +124,40 @@ export function Markets() {
                   <th className="px-4 py-2 text-right font-medium">Change</th>
                   <th className="px-4 py-2 text-right font-medium">Change %</th>
                   <th className="px-4 py-2 text-right font-medium">Volume</th>
+                  <th className="px-4 py-2 text-right font-medium"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item, i) => {
+                {filtered.map((item) => {
                   const symbol = item.symbol || '';
-                  const changePct = item.change_pct ?? item.change_percent ?? item.percent_change ?? item.day_change_pct;
-                  const change = item.change ?? item.day_change;
+                  const changePct = screenerChangePct(item);
+                  const change = screenerChange(item);
+                  const price = screenerPrice(item);
                   return (
-                    <tr key={symbol + i} className="border-b border-neutral-800/50 hover:bg-neutral-800/40">
-                      <td className="px-4 py-2.5">
-                        <Link to={`/markets/${symbol}`} className="font-medium text-neutral-200 hover:text-sky-400">
-                          {symbol}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2.5 text-neutral-400 max-w-[200px] truncate">{item.name || '--'}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-300">{fmtCurrency(item.price ?? item.last_price)}</td>
+                    <tr
+                      key={symbol}
+                      onClick={() => openSymbol(symbol)}
+                      className="cursor-pointer border-b border-neutral-800/50 hover:bg-neutral-800/40"
+                    >
+                      <td className="px-4 py-2.5 font-medium text-sky-400">{symbol}</td>
+                      <td className="px-4 py-2.5 text-neutral-400 max-w-[200px] truncate">{item.name || symbol}</td>
+                      <td className="px-4 py-2.5 text-right text-neutral-300">{fmtCurrency(price)}</td>
                       <td className={`px-4 py-2.5 text-right ${pctColor(change)}`}>{fmtCurrency(change)}</td>
                       <td className={`px-4 py-2.5 text-right ${pctColor(changePct)}`}>{fmtPercent(changePct)}</td>
                       <td className="px-4 py-2.5 text-right text-neutral-400">{fmtLargeNumber(item.volume)}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSymbol(symbol);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:border-sky-700 hover:text-sky-400"
+                        >
+                          <LineChart className="h-3.5 w-3.5" />
+                          Chart &amp; Trade
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -109,15 +168,4 @@ export function Markets() {
       </Card>
     </div>
   );
-}
-
-function normalizeScreener(data: unknown): ScreenerItem[] {
-  if (Array.isArray(data)) return data as ScreenerItem[];
-  if (data && typeof data === 'object') {
-    const obj = data as Record<string, unknown>;
-    for (const key of ['most_actives', 'movers', 'data', 'results']) {
-      if (Array.isArray(obj[key])) return obj[key] as ScreenerItem[];
-    }
-  }
-  return [];
 }

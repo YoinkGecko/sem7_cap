@@ -58,9 +58,11 @@ export function WatchlistPreview() {
           <ErrorState message={error} onRetry={fetch} />
         ) : watchlists.length === 0 ? (
           <EmptyState message="No watchlists yet" />
+        ) : !(watchlists[0]?.symbols?.length) ? (
+          <EmptyState message="No symbols in this watchlist yet" />
         ) : (
           <div className="space-y-1">
-            {(watchlists[0]?.symbols || []).slice(0, 6).map((sym) => {
+            {watchlists[0].symbols.slice(0, 6).map((sym) => {
               const snap = snapshots[sym];
               const price = snap?.latest_trade?.p ?? snap?.latest_trade?.price ?? snap?.price;
               const change = snap?.change ?? snap?.day_change;

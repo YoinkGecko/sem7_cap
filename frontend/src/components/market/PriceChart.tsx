@@ -31,10 +31,12 @@ function daysAgo(n: number): string {
 
 interface PriceChartProps {
   symbol: string;
+  defaultTimeframe?: Timeframe;
+  height?: number;
 }
 
-export function PriceChart({ symbol }: PriceChartProps) {
-  const [timeframe, setTimeframe] = useState<Timeframe>('1M');
+export function PriceChart({ symbol, defaultTimeframe = '1Y', height = 400 }: PriceChartProps) {
+  const [timeframe, setTimeframe] = useState<Timeframe>(defaultTimeframe);
   const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +60,16 @@ export function PriceChart({ symbol }: PriceChartProps) {
   const chartData = useMemo(() => {
     return bars.map((b) => {
       const t = b.t ?? b.timestamp;
-      const time = t ? fmtDateTime(typeof t === 'number' ? new Date(t * 1000).toISOString() : String(t)) : '';
+      const iso =
+        t === undefined || t === null
+          ? ''
+          : typeof t === 'number'
+            ? new Date(t * 1000).toISOString()
+            : String(t);
+      const time = iso ? formatChartLabel(iso, timeframe) : '';
       return { time, price: toNum(b.c ?? b.close) ?? 0 };
     });
-  }, [bars]);
+  }, [bars, timeframe]);
 
   return (
     <div>
@@ -87,7 +95,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
       ) : chartData.length === 0 ? (
         <p className="py-8 text-center text-sm text-neutral-500">No price data available.</p>
       ) : (
-        <ResponsiveContainer width="100%" height={320}>
+        <ResponsiveContainer width="100%" height={height}>
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
@@ -130,4 +138,13 @@ function normalizeBars(data: unknown): Bar[] {
     }
   }
   return [];
+}
+
+function formatChartLabel(iso: string, timeframe: Timeframe): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return fmtDateTime(iso);
+  if (timeframe === '1D' || timeframe === '1W') {
+    return fmtDateTime(iso);
+  }
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }

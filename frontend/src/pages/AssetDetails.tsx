@@ -100,15 +100,15 @@ export function AssetDetails() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-4">
           <Card>
-            <CardHeader title="Price Chart" subtitle={symbol} />
+            <CardHeader title="Price Chart" subtitle={`${symbol} · 1Y default · switch timeframe below`} />
             <div className="p-4">
-              <PriceChart symbol={symbol!} />
+              <PriceChart symbol={symbol!} defaultTimeframe="1Y" height={420} />
             </div>
           </Card>
         </div>
-        <div>
+        <div className="lg:sticky lg:top-4 lg:self-start">
           <OrderTicket symbol={symbol!} latestPrice={price} />
         </div>
       </div>

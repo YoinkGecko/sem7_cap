@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getMostActives, getMovers, getMarketClock, type ScreenerItem, type MarketClock } from '@/services/api';
 import { Card, CardHeader, LoadingState, ErrorState, EmptyState } from '@/components/common/UI';
 import { fmtCurrency, fmtPercent, fmtLargeNumber, pctColor } from '@/utils/format';
+import { screenerChangePct, screenerPrice } from '@/utils/marketData';
 
 export function MarketOverview() {
   const [actives, setActives] = useState<ScreenerItem[]>([]);
@@ -20,8 +21,8 @@ export function MarketOverview() {
         getMovers().catch(() => []),
         getMarketClock().catch(() => null),
       ]);
-      setActives(normalizeScreener(a));
-      setMovers(normalizeScreener(m));
+      setActives(a);
+      setMovers(m);
       setClock(c);
     } catch {
       setError('Unable to load market overview.');
@@ -69,7 +70,7 @@ function ScreenerTable({ title, items }: { title: string; items: ScreenerItem[] 
             <tbody>
               {items.slice(0, 8).map((item, i) => {
                 const symbol = item.symbol || '';
-                const changePct = item.change_pct ?? item.change_percent ?? item.percent_change ?? item.day_change_pct;
+                const changePct = screenerChangePct(item);
                 return (
                   <tr key={symbol + i} className="border-b border-neutral-800/50 hover:bg-neutral-800/40">
                     <td className="py-2">
@@ -77,7 +78,7 @@ function ScreenerTable({ title, items }: { title: string; items: ScreenerItem[] 
                         {symbol}
                       </Link>
                     </td>
-                    <td className="py-2 text-right text-neutral-300">{fmtCurrency(item.price ?? item.last_price)}</td>
+                    <td className="py-2 text-right text-neutral-300">{fmtCurrency(screenerPrice(item))}</td>
                     <td className={`py-2 text-right ${pctColor(changePct)}`}>{fmtPercent(changePct)}</td>
                     <td className="py-2 text-right text-neutral-400">{fmtLargeNumber(item.volume)}</td>
                   </tr>
@@ -89,15 +90,4 @@ function ScreenerTable({ title, items }: { title: string; items: ScreenerItem[] 
       )}
     </div>
   );
-}
-
-function normalizeScreener(data: unknown): ScreenerItem[] {
-  if (Array.isArray(data)) return data as ScreenerItem[];
-  if (data && typeof data === 'object') {
-    const obj = data as Record<string, unknown>;
-    for (const key of ['most_actives', 'movers', 'data', 'results']) {
-      if (Array.isArray(obj[key])) return obj[key] as ScreenerItem[];
-    }
-  }
-  return [];
 }
