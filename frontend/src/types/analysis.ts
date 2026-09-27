@@ -18,6 +18,12 @@ export interface StockAnalysisResponse {
     calendarDaysInSample: number;
     barCount: number;
     betaFormula: string;
+    formulas?: Array<{
+      id: string;
+      name: string;
+      expression: string;
+      description: string;
+    }>;
   };
   pricePerformance: {
     startingPrice: number;
@@ -79,6 +85,23 @@ export interface StockAnalysisResponse {
     latest: number | null;
     relativeToAverage: number | null;
   };
+  extended?: {
+    positiveDays: number;
+    negativeDays: number;
+    flatDays: number;
+    tradedDays: number;
+    winRatePct: number | null;
+    maxConsecutiveGainDays: number;
+    maxConsecutiveLossDays: number;
+    sortinoRatio: number | null;
+    downsideDeviation: number | null;
+    averageTrueRange: number | null;
+    periodRangePct: number | null;
+    periodHigh: number;
+    periodLow: number;
+  };
+  deepInsights?: string[];
+  signalMatrix?: Array<{ label: string; value: number | null; state: string }>;
   chartData: {
     priceSeries: AnalysisSeriesPoint[];
     technicalSeries: AnalysisSeriesPoint[];
@@ -87,6 +110,8 @@ export interface StockAnalysisResponse {
     macdSeries: AnalysisSeriesPoint[];
     drawdownSeries: AnalysisSeriesPoint[];
     returnsSeries: AnalysisSeriesPoint[];
+    emaSeries?: AnalysisSeriesPoint[];
+    dailyReturnSeries?: AnalysisSeriesPoint[];
   };
   aiReport: {
     summary: string;

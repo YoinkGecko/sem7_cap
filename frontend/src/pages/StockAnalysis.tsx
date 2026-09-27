@@ -13,11 +13,14 @@ import {
   Legend,
   ComposedChart,
 } from 'recharts';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { getStockAnalysis } from '@/services/api';
 import type { AnalysisPeriod, StockAnalysisResponse } from '@/types/analysis';
 import { Card, CardHeader, LoadingState, ErrorState } from '@/components/common/UI';
 import { fmtCurrency, fmtDateTime, fmtLargeNumber, fmtPercent } from '@/utils/format';
+import { InfoTip } from '@/components/analysis/InfoTip';
+import { glossaryFor } from '@/utils/analysisGlossary';
+import { downloadAnalysisReport, printAnalysisReport } from '@/utils/analysisReportExport';
 
 const PERIODS: AnalysisPeriod[] = ['1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
@@ -58,8 +61,10 @@ export function StockAnalysis() {
     { label: 'Volatility (ann.)', value: fmtPercent(data.risk.annualizedVolatilityPct) },
     { label: 'Max Drawdown', value: fmtPercent(data.risk.maximumDrawdownPct) },
     { label: 'Sharpe', value: data.risk.sharpeRatio?.toFixed(2) ?? '--' },
+    { label: 'Sortino', value: data.extended?.sortinoRatio?.toFixed(2) ?? '--' },
     { label: 'Beta', value: data.risk.beta?.toFixed(2) ?? '--' },
     { label: 'RSI (14)', value: data.technical.current.rsi14?.toFixed(1) ?? '--' },
+    { label: 'Win Rate', value: fmtPercent(data.extended?.winRatePct) },
   ];
 
   return (
@@ -74,11 +79,10 @@ export function StockAnalysis() {
           <h1 className="text-2xl font-bold text-neutral-100">{data.symbol}</h1>
           <p className="text-sm text-neutral-500">{data.assetName || data.symbol}</p>
           <p className="mt-1 text-xs text-neutral-600">
-            Period {data.period} · Generated {fmtDateTime(data.generatedAt)}
-            {data.cached ? ' · cached' : ''}
+            {data.period} analysis · {fmtDateTime(data.generatedAt)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-2">
           {PERIODS.map((p) => (
             <button
               key={p}
@@ -90,13 +94,30 @@ export function StockAnalysis() {
               {p}
             </button>
           ))}
+          <button
+            onClick={() => downloadAnalysisReport(data)}
+            className="ml-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download Report
+          </button>
+          <button
+            onClick={() => printAnalysisReport(data)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-800"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Print / Save PDF
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
         {summaryCards.map((card) => (
           <Card key={card.label} className="p-4">
-            <p className="text-xs text-neutral-500">{card.label}</p>
+            <p className="flex items-center text-xs text-neutral-500">
+              {card.label}
+              <InfoTip label={card.label} text={glossaryFor(card.label)} />
+            </p>
             <p className="mt-1 text-lg font-semibold text-neutral-100">{card.value}</p>
           </Card>
         ))}
@@ -160,6 +181,61 @@ export function StockAnalysis() {
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <ChartCard title="EMA Trend" subtitle="Close with EMA 20 / 50">
+          <ResponsiveContainer width="100%" height={240}>
+            <ComposedChart data={data.chartData.emaSeries || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} minTickGap={40} />
+              <YAxis tick={{ fontSize: 10, fill: '#737373' }} domain={['auto', 'auto']} width={70} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend />
+              <Line type="monotone" dataKey="close" stroke="#38bdf8" dot={false} strokeWidth={2} name="Close" />
+              <Line type="monotone" dataKey="ema20" stroke="#a78bfa" dot={false} strokeWidth={1.5} name="EMA 20" />
+              <Line type="monotone" dataKey="ema50" stroke="#fb7185" dot={false} strokeWidth={1.5} name="EMA 50" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Daily Returns" subtitle="Distribution of daily % moves">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={data.chartData.dailyReturnSeries || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis dataKey="date" hide />
+              <YAxis tick={{ fontSize: 10, fill: '#737373' }} width={50} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => fmtPercent(Number(v))} />
+              <Bar dataKey="dailyReturnPct" fill="#14b8a6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      <Card>
+        <CardHeader title="Technical Snapshot" />
+        <div className="overflow-x-auto p-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-800 text-xs text-neutral-500">
+                <th className="py-2 text-left">Signal</th>
+                <th className="py-2 text-right">Value</th>
+                <th className="py-2 text-left">State</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.signalMatrix || []).map((row) => (
+                <tr key={row.label} className="border-b border-neutral-800/50">
+                  <td className="py-2 text-neutral-300">{row.label}</td>
+                  <td className="py-2 text-right text-neutral-200">
+                    {typeof row.value === 'number' ? row.value.toFixed(4) : '—'}
+                  </td>
+                  <td className="py-2 text-neutral-400">{row.state}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <ChartCard title="Drawdown" subtitle="Peak-to-trough decline">
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={data.chartData.drawdownSeries}>
@@ -186,8 +262,8 @@ export function StockAnalysis() {
       </div>
 
       <Card>
-        <CardHeader title="Numerical Metrics" subtitle="Calculated on the server from Alpaca daily bars" />
-        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3 text-sm">
+        <CardHeader title="Key Metrics" />
+        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4 text-sm">
           <MetricBlock title="Price Performance" rows={[
             ['Start', fmtCurrency(data.pricePerformance.startingPrice)],
             ['End', fmtCurrency(data.pricePerformance.endingPrice)],
@@ -203,6 +279,15 @@ export function StockAnalysis() {
             ['Sharpe', data.risk.sharpeRatio?.toFixed(4) ?? '--'],
             ['Beta vs ' + data.risk.benchmark, data.risk.beta?.toFixed(4) ?? '--'],
           ]} />
+          <MetricBlock title="Extended Stats" rows={[
+            ['Win Rate', fmtPercent(data.extended?.winRatePct)],
+            ['Up Days', String(data.extended?.positiveDays ?? '--')],
+            ['Down Days', String(data.extended?.negativeDays ?? '--')],
+            ['Max Gain Streak', String(data.extended?.maxConsecutiveGainDays ?? '--')],
+            ['Max Loss Streak', String(data.extended?.maxConsecutiveLossDays ?? '--')],
+            ['Avg True Range', fmtCurrency(data.extended?.averageTrueRange)],
+            ['Period Range %', fmtPercent(data.extended?.periodRangePct)],
+          ]} />
           <MetricBlock title="Volume" rows={[
             ['Average', fmtLargeNumber(data.volume.average)],
             ['Latest', fmtLargeNumber(data.volume.latest)],
@@ -213,7 +298,7 @@ export function StockAnalysis() {
       </Card>
 
       <Card>
-        <CardHeader title="AI Research Report" subtitle="Gemini explains the calculated metrics (no recomputation in the browser)" />
+        <CardHeader title="Research Summary" />
         <div className="space-y-4 p-4 text-sm text-neutral-300">
           {data.aiError && (
             <p className="rounded-md border border-amber-900/40 bg-amber-950/20 px-3 py-2 text-amber-200/90">{data.aiError}</p>
@@ -226,23 +311,11 @@ export function StockAnalysis() {
               <ReportSection title="Risk Analysis" body={data.aiReport.riskAnalysis} />
               <ReportSection title="Technical Analysis" body={data.aiReport.technicalAnalysis} />
               <ReportSection title="Volume Analysis" body={data.aiReport.volumeAnalysis} />
-              <ListSection title="Key Observations" items={data.aiReport.keyObservations} />
-              <ListSection title="Limitations" items={data.aiReport.limitations} />
+              <ListSection title="Highlights" items={data.aiReport.keyObservations} />
             </>
           ) : !data.aiError ? (
             <p className="text-neutral-500">AI report unavailable.</p>
           ) : null}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Methodology & Assumptions" />
-        <div className="space-y-2 p-4 text-sm text-neutral-400">
-          <p>Risk-free rate used for Sharpe: {data.methodology.riskFreeRate}</p>
-          <p>Benchmark for beta: {data.methodology.benchmark} ({data.risk.betaObservationCount} aligned daily returns)</p>
-          <p>Volatility annualization factor: √{data.methodology.tradingDaysForVolatilityAnnualization}</p>
-          <p>{data.methodology.betaFormula}</p>
-          <p>Sample calendar days: {data.methodology.calendarDaysInSample} · Daily bars: {data.methodology.barCount}</p>
         </div>
       </Card>
     </div>

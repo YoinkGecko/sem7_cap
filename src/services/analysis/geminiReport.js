@@ -63,6 +63,7 @@ Rules:
 - Do not provide personalized investment advice.
 - Distinguish historical facts, mathematical observations, and interpretation.
 - Explain WHY the metrics matter, not just repeat them.
+- Write detailed paragraphs (4-6 sentences each section) suitable for a professional equity research memo.
 
 Return ONLY valid JSON with this shape:
 {

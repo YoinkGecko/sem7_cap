@@ -96,6 +96,7 @@ export async function buildStockAnalysis(symbol, period) {
   );
 
   const betaResult = await calculateBeta(symbol, period, dates, returns);
+  const extended = computeExtendedMetrics(bars, returns, closes, annualizedReturn, RISK_FREE_RATE);
 
   const lastIndex = closes.length - 1;
   const current = {
@@ -122,6 +123,7 @@ export async function buildStockAnalysis(symbol, period) {
       barCount: bars.length,
       betaFormula:
         "covariance(stock daily returns, benchmark daily returns) / variance(benchmark daily returns)",
+      formulas: ANALYSIS_FORMULAS,
     },
     pricePerformance: {
       startingPrice,
@@ -191,6 +193,9 @@ export async function buildStockAnalysis(symbol, period) {
       relativeToAverage:
         averageVolume && averageVolume !== 0 ? latestVolume / averageVolume : null,
     },
+    extended: extended.metrics,
+    deepInsights: extended.insights,
+    signalMatrix: extended.signalMatrix,
     chartData: {
       priceSeries: bars.map((b) => ({ date: b.date, close: b.close })),
       technicalSeries: bars.map((b, i) => ({
@@ -222,6 +227,18 @@ export async function buildStockAnalysis(symbol, period) {
         cumulativeReturnPct:
           cumulativeReturn[i] === null ? null : cumulativeReturn[i] * 100,
       })),
+      emaSeries: bars.map((b, i) => ({
+        date: b.date,
+        close: b.close,
+        ema20: ema20[i],
+        ema50: ema50[i],
+      })),
+      dailyReturnSeries: bars
+        .map((b, i) => ({
+          date: b.date,
+          dailyReturnPct: returns[i] === null ? null : returns[i] * 100,
+        }))
+        .filter((row) => row.dailyReturnPct !== null),
     },
   };
 
@@ -298,5 +315,198 @@ export function buildGeminiInput(analysis) {
       observations: analysis.technical.observations,
     },
     volume: analysis.volume,
+    extended: analysis.extended,
+    deepInsights: analysis.deepInsights,
+    signalMatrix: analysis.signalMatrix,
+  };
+}
+
+const ANALYSIS_FORMULAS = [
+  {
+    id: "totalReturn",
+    name: "Total Return (%)",
+    expression: "((P_end − P_start) / P_start) × 100",
+    description: "Simple buy-and-hold percentage change across the selected period.",
+  },
+  {
+    id: "dailyReturn",
+    name: "Daily Return",
+    expression: "(Close_t / Close_{t−1}) − 1",
+    description: "Logically independent daily percentage moves used for volatility and Sharpe.",
+  },
+  {
+    id: "annualizedReturn",
+    name: "Annualized Return",
+    expression: "(P_end / P_start)^(365 / calendarDays) − 1",
+    description: "Scales the observed period return to a one-year equivalent using actual calendar span.",
+  },
+  {
+    id: "volatility",
+    name: "Annualized Volatility",
+    expression: "StdDev(daily returns) × √252",
+    description: "Historical volatility assuming ~252 trading days per year.",
+  },
+  {
+    id: "drawdown",
+    name: "Drawdown",
+    expression: "(Price − RunningPeak) / RunningPeak",
+    description: "Underwater percentage from the prior maximum close within the sample.",
+  },
+  {
+    id: "sharpe",
+    name: "Sharpe Ratio",
+    expression: "(AnnualizedReturn − RiskFreeRate) / AnnualizedVolatility",
+    description: "Return per unit of total volatility using the configured risk-free rate.",
+  },
+  {
+    id: "sortino",
+    name: "Sortino Ratio",
+    expression: "(AnnualizedReturn − RiskFreeRate) / (DownsideDev × √252)",
+    description: "Like Sharpe but penalizes only negative daily returns.",
+  },
+  {
+    id: "beta",
+    name: "Beta",
+    expression: "Cov(R_stock, R_benchmark) / Var(R_benchmark)",
+    description: "Sensitivity to benchmark daily moves on aligned trading dates.",
+  },
+  {
+    id: "rsi",
+    name: "RSI (14)",
+    expression: "100 − (100 / (1 + RS)), RS = AvgGain / AvgLoss (Wilder smoothing)",
+    description: "Momentum oscillator bounded between 0 and 100.",
+  },
+  {
+    id: "macd",
+    name: "MACD",
+    expression: "EMA₁₂(Close) − EMA₂₆(Close); Signal = EMA₉(MACD)",
+    description: "Trend/momentum crossover system derived from exponential moving averages.",
+  },
+];
+
+function computeExtendedMetrics(bars, returns, closes, annualizedReturn, riskFreeRate) {
+  let positiveDays = 0;
+  let negativeDays = 0;
+  let flatDays = 0;
+  let maxGainStreak = 0;
+  let maxLossStreak = 0;
+  let gainStreak = 0;
+  let lossStreak = 0;
+
+  for (const value of returns) {
+    if (value === null) continue;
+    if (value > 0) {
+      positiveDays++;
+      gainStreak++;
+      lossStreak = 0;
+      maxGainStreak = Math.max(maxGainStreak, gainStreak);
+    } else if (value < 0) {
+      negativeDays++;
+      lossStreak++;
+      gainStreak = 0;
+      maxLossStreak = Math.max(maxLossStreak, lossStreak);
+    } else {
+      flatDays++;
+      gainStreak = 0;
+      lossStreak = 0;
+    }
+  }
+
+  const tradedDays = positiveDays + negativeDays + flatDays;
+  const winRatePct =
+    positiveDays + negativeDays > 0 ? (positiveDays / (positiveDays + negativeDays)) * 100 : null;
+
+  const downsideReturns = returns.filter((value) => value !== null && value < 0);
+  const downsideDeviation = standardDeviation(downsideReturns);
+  const sortinoRatio =
+    downsideDeviation && downsideDeviation !== 0 && annualizedReturn !== null
+      ? (annualizedReturn - riskFreeRate) / (downsideDeviation * Math.sqrt(252))
+      : null;
+
+  const trueRanges = bars.map((bar) => bar.high - bar.low);
+  const averageTrueRange = mean(trueRanges);
+  const averageClose = mean(closes);
+  const periodHigh = Math.max(...bars.map((bar) => bar.high));
+  const periodLow = Math.min(...bars.map((bar) => bar.low));
+  const rangePct =
+    averageClose && averageClose !== 0 ? ((periodHigh - periodLow) / averageClose) * 100 : null;
+
+  const metrics = {
+    positiveDays,
+    negativeDays,
+    flatDays,
+    tradedDays,
+    winRatePct,
+    maxConsecutiveGainDays: maxGainStreak,
+    maxConsecutiveLossDays: maxLossStreak,
+    sortinoRatio,
+    downsideDeviation,
+    averageTrueRange,
+    periodRangePct: rangePct,
+    periodHigh,
+    periodLow,
+  };
+
+  const insights = [
+    `Observed ${tradedDays} trading days with ${positiveDays} up days and ${negativeDays} down days (win rate ${winRatePct?.toFixed(2) ?? "n/a"}%).`,
+    `Largest streaks: ${maxGainStreak} consecutive gain days and ${maxLossStreak} consecutive loss days.`,
+    `Period high/low range spans ${rangePct?.toFixed(2) ?? "n/a"}% relative to average close.`,
+    `Average daily true range (high−low) is ${averageTrueRange?.toFixed(4) ?? "n/a"}.`,
+  ];
+
+  const signalMatrix = buildSignalMatrix(closes, bars);
+
+  return { metrics, insights, signalMatrix };
+}
+
+function buildSignalMatrix(closes, bars) {
+  const last = closes.length - 1;
+  const close = closes[last];
+  const sma20 = sma(closes, 20)[last];
+  const sma50 = sma(closes, 50)[last];
+  const sma200 = sma(closes, 200)[last];
+  const rsi14 = rsi(closes, 14)[last];
+  const macdData = macd(closes);
+
+  return [
+    signalRow("Price vs SMA 20", close, sma20, close > sma20 ? "above" : "below"),
+    signalRow("Price vs SMA 50", close, sma50, close > sma50 ? "above" : "below"),
+    signalRow("Price vs SMA 200", close, sma200, sma200 === null ? "insufficient data" : close > sma200 ? "above" : "below"),
+    {
+      label: "RSI 14 zone",
+      value: rsi14,
+      state:
+        rsi14 === null ? "insufficient data" : rsi14 >= 70 ? "overbought zone" : rsi14 <= 30 ? "oversold zone" : "neutral",
+    },
+    {
+      label: "MACD vs Signal",
+      value: macdData.macdLine[last],
+      state:
+        macdData.macdLine[last] === null || macdData.signalLine[last] === null
+          ? "insufficient data"
+          : macdData.macdLine[last] > macdData.signalLine[last]
+            ? "bullish crossover bias"
+            : "bearish crossover bias",
+    },
+    {
+      label: "Volume vs Average",
+      value: bars[last]?.volume,
+      state:
+        bars[last]?.volume && mean(bars.map((b) => b.volume))
+          ? bars[last].volume / mean(bars.map((b) => b.volume)) > 1.25
+            ? "elevated"
+            : bars[last].volume / mean(bars.map((b) => b.volume)) < 0.75
+              ? "light"
+              : "normal"
+          : "unknown",
+    },
+  ];
+}
+
+function signalRow(label, price, average, state) {
+  return {
+    label,
+    value: average === null ? null : price / average - 1,
+    state: average === null ? "insufficient data" : state,
   };
 }
