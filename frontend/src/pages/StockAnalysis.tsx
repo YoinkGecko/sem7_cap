@@ -53,7 +53,7 @@ export function StockAnalysis() {
     setSearchParams({ period: next });
   };
 
-  if (loading) return <div className="p-6"><LoadingState text="Building research report..." /></div>;
+  if (loading) return <div className="p-6"><LoadingState text="Generating in-depth AI research (multiple sections)..." /></div>;
   if (error || !data) return <div className="p-6"><ErrorState message={error || 'No data'} onRetry={load} /></div>;
 
   const summaryCards = [
@@ -298,19 +298,32 @@ export function StockAnalysis() {
       </Card>
 
       <Card>
-        <CardHeader title="Research Summary" />
+        <CardHeader
+          title="Research Summary"
+          subtitle={
+            data.aiReport?.wordCount
+              ? `${data.aiReport.wordCount.toLocaleString()} words · ${data.aiReport.generatedInPasses}/${data.aiReport.totalPasses} AI sections`
+              : undefined
+          }
+        />
         <div className="space-y-4 p-4 text-sm text-neutral-300">
           {data.aiError && (
             <p className="rounded-md border border-amber-900/40 bg-amber-950/20 px-3 py-2 text-amber-200/90">{data.aiError}</p>
           )}
           {data.aiReport ? (
             <>
-              <ReportSection title="Summary" body={data.aiReport.summary} />
+              <ReportSection title="Executive Summary" body={data.aiReport.summary} />
+              <ReportSection title="Investment Thesis" body={data.aiReport.investmentThesis} />
               <ReportSection title="Price Analysis" body={data.aiReport.priceAnalysis} />
+              <ReportSection title="Price Drivers" body={data.aiReport.priceDrivers} />
               <ReportSection title="Return Analysis" body={data.aiReport.returnAnalysis} />
               <ReportSection title="Risk Analysis" body={data.aiReport.riskAnalysis} />
+              <ReportSection title="Drawdown Analysis" body={data.aiReport.drawdownAnalysis} />
               <ReportSection title="Technical Analysis" body={data.aiReport.technicalAnalysis} />
+              <ReportSection title="Momentum & Signals" body={data.aiReport.momentumSignals} />
               <ReportSection title="Volume Analysis" body={data.aiReport.volumeAnalysis} />
+              <ReportSection title="Benchmark Context" body={data.aiReport.benchmarkContext} />
+              <ReportSection title="Conclusion" body={data.aiReport.conclusion} />
               <ListSection title="Highlights" items={data.aiReport.keyObservations} />
             </>
           ) : !data.aiError ? (
@@ -354,12 +367,12 @@ function MetricBlock({ title, rows }: { title: string; rows: [string, string][] 
   );
 }
 
-function ReportSection({ title, body }: { title: string; body: string }) {
+function ReportSection({ title, body }: { title: string; body?: string }) {
   if (!body) return null;
   return (
     <div>
       <h3 className="mb-1 text-xs font-semibold uppercase text-neutral-500">{title}</h3>
-      <p className="leading-relaxed text-neutral-300">{body}</p>
+      <p className="whitespace-pre-wrap leading-relaxed text-neutral-300">{body}</p>
     </div>
   );
 }

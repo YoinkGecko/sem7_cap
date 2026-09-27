@@ -115,13 +115,22 @@ export interface StockAnalysisResponse {
   };
   aiReport: {
     summary: string;
+    investmentThesis?: string;
     priceAnalysis: string;
+    priceDrivers?: string;
     returnAnalysis: string;
     riskAnalysis: string;
+    drawdownAnalysis?: string;
     technicalAnalysis: string;
+    momentumSignals?: string;
     volumeAnalysis: string;
+    benchmarkContext?: string;
+    conclusion?: string;
     keyObservations: string[];
     limitations: string[];
+    wordCount?: number;
+    generatedInPasses?: number;
+    totalPasses?: number;
   } | null;
   aiError: string | null;
 }

@@ -186,13 +186,28 @@ export function buildAnalysisReportHtml(data: StockAnalysisResponse) {
         ? `<section>
       <h2>Research Summary</h2>
       <div class="card prose">
-        <p><span class="pill">Overview</span> ${escapeHtml(ai.summary)}</p>
-        <p><strong>Price:</strong> ${escapeHtml(ai.priceAnalysis)}</p>
-        <p><strong>Returns:</strong> ${escapeHtml(ai.returnAnalysis)}</p>
-        <p><strong>Risk:</strong> ${escapeHtml(ai.riskAnalysis)}</p>
-        <p><strong>Technical:</strong> ${escapeHtml(ai.technicalAnalysis)}</p>
-        <p><strong>Volume:</strong> ${escapeHtml(ai.volumeAnalysis)}</p>
+        ${[
+          ['Executive Summary', ai.summary],
+          ['Investment Thesis', ai.investmentThesis],
+          ['Price Analysis', ai.priceAnalysis],
+          ['Price Drivers', ai.priceDrivers],
+          ['Return Analysis', ai.returnAnalysis],
+          ['Risk Analysis', ai.riskAnalysis],
+          ['Drawdown Analysis', ai.drawdownAnalysis],
+          ['Technical Analysis', ai.technicalAnalysis],
+          ['Momentum & Signals', ai.momentumSignals],
+          ['Volume Analysis', ai.volumeAnalysis],
+          ['Benchmark Context', ai.benchmarkContext],
+          ['Conclusion', ai.conclusion],
+        ]
+          .filter(([, body]) => body)
+          .map(
+            ([title, body]) =>
+              `<h3 style="margin-top:16px;color:#12355f">${escapeHtml(String(title))}</h3><p>${escapeHtml(String(body)).replace(/\n/g, '<br/>')}</p>`
+          )
+          .join('')}
         <p><strong>Highlights:</strong></p><ul>${ai.keyObservations.map((o) => `<li>${escapeHtml(o)}</li>`).join('')}</ul>
+        ${ai.wordCount ? `<p style="margin-top:12px;color:#64748b;font-size:12px">Approx. ${ai.wordCount} words · ${ai.generatedInPasses}/${ai.totalPasses} AI sections</p>` : ''}
       </div>
     </section>`
         : `<section><h2>Research Summary</h2><div class="card prose">${escapeHtml(data.aiError || 'Summary unavailable.')}</div></section>`

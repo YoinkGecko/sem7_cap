@@ -1,5 +1,7 @@
+import { getGeminiModelCandidates, withGeminiModelFallback } from "../config/gemini.js";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+
 const USE_SEARCH = process.env.GEMINI_USE_SEARCH === "true";
 const CACHE_TTL_MS =
   (Number.parseInt(process.env.GEMINI_NEWS_CACHE_MINUTES || "120", 10) || 120) *
@@ -60,7 +62,7 @@ function parseNewsJson(text, ticker) {
   }
 }
 
-async function callGemini(symbol) {
+async function callGemini(symbol, model) {
   const body = {
     contents: [{ parts: [{ text: buildPrompt(symbol) }] }],
   };
@@ -69,7 +71,7 @@ async function callGemini(symbol) {
     body.tools = [{ google_search: {} }];
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -166,13 +168,16 @@ export async function fetchStockNewsFromGemini(symbol) {
   }
 
   const request = (async () => {
-    const data = await callGemini(ticker);
+    const { result: data, model } = await withGeminiModelFallback(
+      getGeminiModelCandidates(),
+      (candidateModel) => callGemini(ticker, candidateModel)
+    );
     const articles = parseNewsJson(extractText(data), ticker);
 
     const payload = {
       news: articles.slice(0, 8),
       source: "gemini",
-      model: GEMINI_MODEL,
+      model,
       symbol: ticker,
     };
 
