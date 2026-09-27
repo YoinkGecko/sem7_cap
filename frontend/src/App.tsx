@@ -9,6 +9,7 @@ import { Orders } from '@/pages/Orders';
 import { Watchlists } from '@/pages/Watchlists';
 import { Settings } from '@/pages/Settings';
 import { StockAnalysis } from '@/pages/StockAnalysis';
+import { AutomatedTrading } from '@/pages/AutomatedTrading';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/watchlists" element={<Watchlists />} />
+            <Route path="/automated-trading" element={<AutomatedTrading />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>

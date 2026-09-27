@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Bot,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { to: '/orders', label: 'Orders', icon: ClipboardList },
   { to: '/watchlists', label: 'Watchlists', icon: Star },
+  { to: '/automated-trading', label: 'Auto Trading', icon: Bot },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

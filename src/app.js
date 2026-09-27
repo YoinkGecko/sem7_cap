@@ -7,6 +7,8 @@ import marketRouter from "./routers/market.routes.js";
 import watchlistRouter from "./routers/watchlist.routes.js";
 import assetsRouter from "./routers/assets.routes.js";
 import analysisRouter from "./routers/analysis.routes.js";
+import plannerRouter from "./routers/planner.routes.js";
+import intentRouter from "./routers/intent.routes.js";
 
 const app = express();
 
@@ -35,6 +37,8 @@ app.use("/api/market", marketRouter);
 app.use("/api/watchlists", watchlistRouter);
 app.use("/api/assets", assetsRouter);
 app.use("/api/analysis", analysisRouter);
+app.use("/api/planner", plannerRouter);
+app.use("/api/intent", intentRouter);
 
 app.get("/health", (req, res) => {
   res.json({

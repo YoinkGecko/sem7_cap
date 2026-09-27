@@ -3,6 +3,9 @@ export function getGeminiModelCandidates(preferredEnvKey) {
     (preferredEnvKey === "analysis"
       ? process.env.GEMINI_ANALYSIS_MODEL
       : null) ||
+    (preferredEnvKey === "planner"
+      ? process.env.GEMINI_PLANNER_MODEL
+      : null) ||
     process.env.GEMINI_MODEL;
 
   const defaults = ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];

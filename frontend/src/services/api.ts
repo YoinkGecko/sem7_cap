@@ -1,4 +1,6 @@
 import type { AnalysisPeriod, StockAnalysisResponse } from '@/types/analysis';
+import type { PlannerInput, PlannerResponse } from '@/types/planner';
+import type { IntentBatchResponse } from '@/types/intent';
 import type {
   Account,
   Activity,
@@ -334,6 +336,27 @@ export async function removeFromWatchlist(id: string, symbol: string): Promise<W
 
 export const deleteWatchlist = (id: string) =>
   request<void>(`/watchlists/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+// ============================================================
+// Planner Agent
+// ============================================================
+
+export async function createTradingPlan(input: PlannerInput): Promise<PlannerResponse> {
+  return request<PlannerResponse>('/planner/plan', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function ingestIntentNews(
+  symbols: string[],
+  limitPerSymbol = 5
+): Promise<IntentBatchResponse> {
+  return request<IntentBatchResponse>('/intent/ingest-news', {
+    method: 'POST',
+    body: JSON.stringify({ symbols, limitPerSymbol }),
+  });
+}
 
 // ============================================================
 // Helpers
