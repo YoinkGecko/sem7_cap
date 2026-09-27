@@ -1,0 +1,267 @@
+import type {
+  Account,
+  Activity,
+  PortfolioHistory,
+  Order,
+  CreateOrderRequest,
+  ReplaceOrderRequest,
+  Asset,
+  Bar,
+  Quote,
+  Trade,
+  Snapshot,
+  ScreenerItem,
+  MarketClock,
+  MarketCalendar,
+  NewsArticle,
+  CorporateAction,
+  ForexRate,
+  OptionContract,
+  Watchlist,
+  CreateWatchlistRequest,
+} from '@/types/trading';
+
+export type {
+  Account,
+  Activity,
+  PortfolioHistory,
+  Order,
+  OrderSide,
+  OrderType,
+  CreateOrderRequest,
+  ReplaceOrderRequest,
+  Asset,
+  Bar,
+  Quote,
+  Trade,
+  Snapshot,
+  ScreenerItem,
+  MarketClock,
+  MarketCalendar,
+  NewsArticle,
+  CorporateAction,
+  ForexRate,
+  OptionContract,
+  Watchlist,
+  CreateWatchlistRequest,
+} from '@/types/trading';
+
+const DEFAULT_API_BASE = import.meta.env.DEV ? '/api' : 'http://localhost:3000/api';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE).replace(/\/$/, '');
+
+export class ApiClientError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'ApiClientError';
+    this.status = status;
+  }
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
+  } catch {
+    throw new ApiClientError('Unable to connect to trading server.', 0);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  let body: unknown;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    body = await response.json().catch(() => null);
+  } else {
+    body = await response.text().catch(() => null);
+  }
+
+  if (!response.ok) {
+    let msg = `Request failed with status ${response.status}`;
+    if (typeof body === 'string' && body) {
+      msg = body;
+    } else if (body && typeof body === 'object' && 'message' in body) {
+      msg = String((body as Record<string, unknown>).message);
+    } else if (body && typeof body === 'object' && 'error' in body) {
+      msg = String((body as Record<string, unknown>).error);
+    }
+    throw new ApiClientError(msg, response.status);
+  }
+
+  return body as T;
+}
+
+function toQuery(params?: Record<string, unknown>): string {
+  if (!params) return '';
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  if (!entries.length) return '';
+  return '?' + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');
+}
+
+function num(v: string | number | undefined | null): number | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  return Number.isNaN(n) ? undefined : n;
+}
+
+// ============================================================
+// Account
+// ============================================================
+
+export const getAccount = () => request<Account>('/account');
+export const getAccountActivity = () => request<Activity[]>('/account/activity');
+export const getPortfolio = () => request<PortfolioHistory>('/account/portfolio');
+
+// ============================================================
+// Orders
+// ============================================================
+
+export const getOrders = (status?: string) =>
+  request<Order[]>(`/orders${toQuery({ status })}`);
+
+export const getOrder = (id: string) => request<Order>(`/orders/${id}`);
+export const getOrderByClientId = (clientOrderId: string) =>
+  request<Order>(`/orders/client/${encodeURIComponent(clientOrderId)}`);
+
+export const createOrder = (data: CreateOrderRequest) =>
+  request<Order>('/orders', {
+    method: 'POST',
+    body: JSON.stringify({
+      symbol: data.symbol,
+      side: data.side,
+      qty: data.qty,
+      type: data.type,
+      ...(data.limit_price !== undefined ? { limit_price: data.limit_price } : {}),
+      ...(data.dry_run ? { dry_run: true } : {}),
+      ...(data.client_order_id ? { client_order_id: data.client_order_id } : {}),
+      ...(data.time_in_force ? { time_in_force: data.time_in_force } : {}),
+    }),
+  });
+
+export const replaceOrder = (id: string, data: ReplaceOrderRequest) =>
+  request<Order>(`/orders/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(data.qty !== undefined ? { qty: data.qty } : {}),
+      ...(data.limit_price !== undefined ? { limit_price: data.limit_price } : {}),
+      ...(data.time_in_force ? { time_in_force: data.time_in_force } : {}),
+    }),
+  });
+
+export const cancelOrder = (id: string) =>
+  request<void>(`/orders/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+export const cancelAllOrders = () => request<void>('/orders', { method: 'DELETE' });
+
+// ============================================================
+// Assets
+// ============================================================
+
+export const getAssets = () => request<Asset[] | { assets?: Asset[] }>('/assets');
+export const getAsset = (symbol: string) =>
+  request<Asset>(`/assets/${encodeURIComponent(symbol)}`);
+
+// ============================================================
+// Market Data
+// ============================================================
+
+export const getBars = (
+  symbol: string,
+  params?: { start?: string; end?: string; timeframe?: string; limit?: number }
+) => request<Bar[] | { bars?: Bar[] }>(`/market/bars/${encodeURIComponent(symbol)}${toQuery(params as Record<string, unknown>)}`);
+
+export const getQuotes = (symbol: string, params?: { start?: string }) =>
+  request<Quote[] | { quotes?: Quote[] }>(`/market/quotes/${encodeURIComponent(symbol)}${toQuery(params as Record<string, unknown>)}`);
+
+export const getTrades = (symbol: string, params?: { start?: string }) =>
+  request<Trade[] | { trades?: Trade[] }>(`/market/trades/${encodeURIComponent(symbol)}${toQuery(params as Record<string, unknown>)}`);
+
+export const getLatestBar = (symbol: string) =>
+  request<Bar>(`/market/latest-bar/${encodeURIComponent(symbol)}`);
+
+export const getLatestQuote = (symbol: string) =>
+  request<Quote>(`/market/latest-quote/${encodeURIComponent(symbol)}`);
+
+export const getLatestTrade = (symbol: string) =>
+  request<Trade>(`/market/latest-trade/${encodeURIComponent(symbol)}`);
+
+export const getSnapshot = (symbol: string) =>
+  request<Snapshot>(`/market/snapshot/${encodeURIComponent(symbol)}`);
+
+export const getMostActives = () =>
+  request<ScreenerItem[] | { most_actives?: ScreenerItem[] }>(`/market/screener/most-actives`);
+
+export const getMovers = () =>
+  request<ScreenerItem[] | { movers?: ScreenerItem[] }>(`/market/screener/movers`);
+
+export const getMarketClock = () => request<MarketClock>('/market/clock');
+export const getMarketCalendar = () => request<MarketCalendar[] | { calendar?: MarketCalendar[] }>('/market/calendar');
+
+export const getNews = (symbol: string) =>
+  request<NewsArticle[] | { news?: NewsArticle[] }>(`/market/news/${encodeURIComponent(symbol)}`);
+
+export const getCorporateActions = (symbol: string, types?: string) =>
+  request<CorporateAction[] | { corporate_actions?: CorporateAction[] }>(
+    `/market/corporate-actions/${encodeURIComponent(symbol)}${toQuery({ types })}`
+  );
+
+export const getForex = (pair?: string) =>
+  request<ForexRate | ForexRate[] | { rates?: ForexRate[] }>(`/market/forex${toQuery({ pair })}`);
+
+// ============================================================
+// Options
+// ============================================================
+
+export const getOptionsChain = (symbol: string) =>
+  request<OptionContract[] | { contracts?: OptionContract[] }>(`/market/options/chain/${encodeURIComponent(symbol)}`);
+
+export const getOptionsSnapshot = (symbol: string) =>
+  request<OptionContract[] | { snapshots?: OptionContract[] }>(`/market/options/snapshot/${encodeURIComponent(symbol)}`);
+
+export const getOptionsLatestQuotes = (symbol: string) =>
+  request<OptionContract[] | { quotes?: OptionContract[] }>(`/market/options/latest-quotes/${encodeURIComponent(symbol)}`);
+
+// ============================================================
+// Watchlists
+// ============================================================
+
+export const getWatchlists = () => request<Watchlist[]>('/watchlists');
+
+export const createWatchlist = (data: CreateWatchlistRequest) =>
+  request<Watchlist>('/watchlists', {
+    method: 'POST',
+    body: JSON.stringify({ name: data.name, symbols: data.symbols || [] }),
+  });
+
+export const getWatchlist = (id: string) =>
+  request<Watchlist>(`/watchlists/${encodeURIComponent(id)}`);
+
+export const addToWatchlist = (id: string, symbol: string) =>
+  request<Watchlist>(`/watchlists/${encodeURIComponent(id)}/${encodeURIComponent(symbol)}`, {
+    method: 'POST',
+  });
+
+export const removeFromWatchlist = (id: string, symbol: string) =>
+  request<Watchlist>(`/watchlists/${encodeURIComponent(id)}/${encodeURIComponent(symbol)}`, {
+    method: 'DELETE',
+  });
+
+export const deleteWatchlist = (id: string) =>
+  request<void>(`/watchlists/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+// ============================================================
+// Helpers
+// ============================================================
+
+export { num };
