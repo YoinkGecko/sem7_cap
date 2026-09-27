@@ -11,9 +11,15 @@ export function useMarketClock() {
     setError(null);
     try {
       const data = await getMarketClock();
-      setClock(data);
+      if (!data) {
+        setError('Unable to read market clock.');
+        setClock(null);
+      } else {
+        setClock(data);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load market status.');
+      setClock(null);
     } finally {
       setLoading(false);
     }

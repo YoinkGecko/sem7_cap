@@ -74,6 +74,20 @@ export function fmtTime(value: string | undefined | null): string {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
+/** US equity session times in Eastern Time (matches Alpaca clock). */
+export function fmtMarketTimeEt(value: string | undefined | null): string {
+  if (!value) return '--';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '--';
+  return d.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+}
+
 export function toNum(value: string | number | undefined | null): number | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   const n = typeof value === 'number' ? value : parseFloat(String(value));

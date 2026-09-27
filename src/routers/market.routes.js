@@ -1,6 +1,7 @@
 import express from "express";
 import { runCommand } from "../config/command.js";
 import { fetchStockNews } from "../services/stockNews.js";
+import { normalizeMarketClockPayload } from "../utils/marketClock.js";
 
 const router = express.Router();
 
@@ -354,7 +355,7 @@ router.get("/clock", async (req, res) => {
       "clock"
     ]);
 
-    res.json(JSON.parse(result));
+    res.json(normalizeMarketClockPayload(JSON.parse(result)));
   } catch (error) {
     res.status(500).json({
       error: error.message

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, TrendingUp, Menu } from 'lucide-react';
 import { useMarketClock } from '@/hooks/useMarketClock';
-import { fmtTime } from '@/utils/format';
+import { fmtMarketTimeEt } from '@/utils/format';
+import { marketStatusLabel } from '@/utils/marketData';
 
 interface TopBarProps {
   onMobileMenu: () => void;
@@ -12,10 +13,11 @@ export function TopBar({ onMobileMenu }: TopBarProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
-  const { clock } = useMarketClock();
+  const { clock, loading } = useMarketClock();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isOpen = clock?.is_open ?? false;
+  const isOpen = clock?.is_open === true;
+  const statusKnown = !loading && clock != null;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -85,20 +87,38 @@ export function TopBar({ onMobileMenu }: TopBarProps) {
       <div className="ml-auto flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full ${isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-600'}`}
+            className={`h-2 w-2 rounded-full ${
+              loading
+                ? 'bg-amber-400 animate-pulse'
+                : isOpen
+                  ? 'bg-emerald-400 animate-pulse'
+                  : statusKnown
+                    ? 'bg-neutral-600'
+                    : 'bg-amber-500'
+            }`}
           />
-          <div className="text-xs">
-            <span className={`font-medium ${isOpen ? 'text-emerald-400' : 'text-neutral-400'}`}>
-              {isOpen ? 'Market Open' : 'Market Closed'}
+          <div className="text-xs max-w-[14rem] sm:max-w-none">
+            <span
+              className={`font-medium ${
+                loading
+                  ? 'text-neutral-400'
+                  : isOpen
+                    ? 'text-emerald-400'
+                    : statusKnown
+                      ? 'text-neutral-400'
+                      : 'text-amber-400'
+              }`}
+            >
+              {marketStatusLabel(clock, loading)}
             </span>
-            {!isOpen && clock?.next_open && (
+            {statusKnown && !isOpen && clock?.next_open && (
               <span className="text-neutral-600 ml-1.5 hidden sm:inline">
-                · Next {fmtTime(clock.next_open)}
+                · Opens {fmtMarketTimeEt(clock.next_open)}
               </span>
             )}
-            {isOpen && clock?.next_close && (
+            {statusKnown && isOpen && clock?.next_close && (
               <span className="text-neutral-600 ml-1.5 hidden sm:inline">
-                · Close {fmtTime(clock.next_close)}
+                · Closes {fmtMarketTimeEt(clock.next_close)}
               </span>
             )}
           </div>

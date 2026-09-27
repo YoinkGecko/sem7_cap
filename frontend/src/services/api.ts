@@ -29,6 +29,7 @@ import {
   normalizeLatestTrade,
   normalizeScreener,
   normalizeSnapshot,
+  normalizeMarketClock,
 } from '@/utils/marketData';
 
 export type {
@@ -227,7 +228,8 @@ export async function getMovers(): Promise<ScreenerItem[]> {
   return normalizeScreener(data);
 }
 
-export const getMarketClock = () => request<MarketClock>('/market/clock');
+export const getMarketClock = async () =>
+  normalizeMarketClock(await request<unknown>('/market/clock'));
 export const getMarketCalendar = () => request<MarketCalendar[] | { calendar?: MarketCalendar[] }>('/market/calendar');
 
 export async function getNews(symbol: string): Promise<{

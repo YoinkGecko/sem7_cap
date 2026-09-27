@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { getMostActives, getMovers, getMarketClock, type ScreenerItem, type MarketClock } from '@/services/api';
 import { Card, CardHeader, LoadingState, ErrorState, EmptyState } from '@/components/common/UI';
 import { fmtCurrency, fmtPercent, fmtLargeNumber, pctColor } from '@/utils/format';
-import { screenerChangePct, screenerPrice } from '@/utils/marketData';
+import { screenerChangePct, screenerPrice, marketStatusLabel } from '@/utils/marketData';
 
 export function MarketOverview() {
   const [actives, setActives] = useState<ScreenerItem[]>([]);
@@ -40,7 +40,7 @@ export function MarketOverview() {
     <Card>
       <CardHeader
         title="Market Overview"
-        subtitle={clock?.is_open ? 'Market Open' : 'Market Closed'}
+        subtitle={marketStatusLabel(clock, loading)}
       />
       <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-2">
         <ScreenerTable title="Most Active" items={actives} />

@@ -1,4 +1,4 @@
-import type { Bar, Quote, ScreenerItem, Snapshot, Trade } from '@/types/trading';
+import type { Bar, MarketClock, Quote, ScreenerItem, Snapshot, Trade } from '@/types/trading';
 import { toNum } from '@/utils/format';
 
 export function normalizeScreener(data: unknown): ScreenerItem[] {
@@ -151,3 +151,61 @@ export function screenerChange(item: ScreenerItem): number | string | undefined 
 export function screenerPrice(item: ScreenerItem): number | string | undefined {
   return item.price ?? item.last_price;
 }
+
+function toBool(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true' || value === 1) return true;
+  if (value === 'false' || value === 0) return false;
+  return undefined;
+}
+
+function inferMarketOpen(timestamp?: string, nextOpen?: string, nextClose?: string): boolean | undefined {
+  if (!timestamp || !nextOpen || !nextClose) return undefined;
+
+  const t = new Date(timestamp).getTime();
+  const openT = new Date(nextOpen).getTime();
+  const closeT = new Date(nextClose).getTime();
+
+  if (!Number.isFinite(t) || !Number.isFinite(openT) || !Number.isFinite(closeT)) {
+    return undefined;
+  }
+
+  if (openT > closeT) {
+    return t < closeT;
+  }
+
+  return t >= openT && t < closeT;
+}
+
+export function normalizeMarketClock(data: unknown): MarketClock | null {
+  if (!data || typeof data !== 'object') return null;
+
+  const raw = data as Record<string, unknown>;
+  const source =
+    raw.clock && typeof raw.clock === 'object' ? (raw.clock as Record<string, unknown>) : raw;
+
+  const timestamp = (source.timestamp ?? source.market_time) as string | undefined;
+  const nextOpen = (source.next_open ?? source.nextOpen) as string | undefined;
+  const nextClose = (source.next_close ?? source.nextClose) as string | undefined;
+
+  let isOpen = toBool(source.is_open ?? source.isOpen);
+  if (typeof isOpen !== 'boolean') {
+    isOpen = inferMarketOpen(timestamp, nextOpen, nextClose);
+  }
+
+  return {
+    timestamp,
+    market_time: (source.market_time as string | undefined) ?? timestamp,
+    next_open: nextOpen,
+    next_close: nextClose,
+    session: source.session as string | undefined,
+    is_open: isOpen ?? false,
+  };
+}
+
+export function marketStatusLabel(clock: MarketClock | null, loading?: boolean): string {
+  if (loading) return 'Checking market status…';
+  if (!clock) return 'Market status unavailable';
+  return clock.is_open ? 'US market open (regular session)' : 'US market closed';
+}
+
