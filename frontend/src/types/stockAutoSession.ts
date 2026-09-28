@@ -1,6 +1,8 @@
-export type StockAutoSessionStatus = 'RUNNING' | 'STOPPED' | 'LOSS_LIMIT_REACHED';
-
-export type StockAutoStrategyType = 'pullback_entry' | 'momentum_breakout';
+export type StockAutoSessionStatus =
+  | 'RUNNING'
+  | 'STOPPED'
+  | 'LOSS_LIMIT_REACHED'
+  | 'PROFIT_TARGET_REACHED';
 
 export interface StockAutoTradeRecord {
   side: 'buy' | 'sell';
@@ -18,8 +20,8 @@ export interface StockAutoSession {
   status: StockAutoSessionStatus;
   budgetUsd: number;
   maxLossUsd: number;
+  profitMinUsd: number;
   intervalMs: number;
-  strategyType: StockAutoStrategyType;
   usePaperBroker: boolean;
   startedAt: string;
   stoppedAt?: string | null;
@@ -29,25 +31,26 @@ export interface StockAutoSession {
   lastTickAt?: string | null;
   lastError?: string | null;
   currentPrice?: number | null;
-  dayChangePct?: number | null;
-  availableBudgetUsd?: number;
+  sessionEntryQty?: number;
+  sessionEntryAvgPrice?: number | null;
+  sessionTotalCost?: number;
+  sessionMarketValue?: number;
   positionQty?: number;
-  positionSide?: string;
   positionMarketValue?: number;
   positionAvgEntry?: number | null;
   runningPnL?: number;
-  realizedPnL?: number;
-  unrealizedPnL?: number;
   lastTrade?: StockAutoTradeRecord | null;
-  lastProposal?: { action?: string | null; reason?: string; evaluatedAt?: string } | null;
+  lastEvaluation?: { action?: string | null; reason?: string; evaluatedAt?: string } | null;
+  initialBuyComplete?: boolean;
   lossLimitTriggered?: boolean;
+  profitTargetReached?: boolean;
   tickLog?: { at: string; message: string }[];
 }
 
 export interface StartStockAutoSessionRequest {
   budgetUsd: number;
   maxLossUsd: number;
+  profitMinUsd: number;
   intervalMs?: number;
-  strategyType?: StockAutoStrategyType;
   usePaperBroker?: boolean;
 }

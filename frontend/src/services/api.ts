@@ -506,10 +506,19 @@ export async function startStockAutoSession(symbol: string, body: StartStockAuto
   );
 }
 
-export async function stopStockAutoSession(sessionId: string) {
+export async function stopStockAutoSession(
+  sessionId: string,
+  options?: { sellPosition?: boolean; reason?: string }
+) {
   return request<{ session: StockAutoSession }>(
     `/stock-auto/sessions/${encodeURIComponent(sessionId)}/stop`,
-    { method: 'POST', body: JSON.stringify({}) }
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        sellPosition: options?.sellPosition === true,
+        ...(options?.reason ? { reason: options.reason } : {}),
+      }),
+    }
   );
 }
 
