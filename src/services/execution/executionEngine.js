@@ -1,4 +1,4 @@
-import { evaluateTradeProposal, loadPolicyOrThrow } from "../capbac/index.js";
+import { evaluateTradeProposal, resolvePolicyForAutomationRun } from "../capbac/index.js";
 import { getAutomationRun, updateAutomationRun } from "./automationRunStore.js";
 import {
   appendExecutionRecord,
@@ -8,10 +8,12 @@ import {
 } from "./executionJournal.js";
 import {
   cancelBrokerOrder,
+  executeMarketOrder,
   fetchBrokerOrder,
-  fetchSnapshotPrice,
-  submitBrokerOrder,
 } from "./brokerGateway.js";
+import { flushAutomationPersistence } from "./automationPersistence.js";
+
+const DEFER = { deferPersist: true };
 
 const EXECUTION_SANDBOX =
   process.env.EXECUTION_SANDBOX !== "false" && process.env.EXECUTION_LIVE !== "true";
@@ -38,14 +40,28 @@ export function isExecutionSandboxed(options = {}) {
 }
 
 export async function executeApprovedForRun(automationRunId, options = {}) {
-  const run = getAutomationRun(automationRunId);
+  const run = await getAutomationRun(automationRunId);
   if (!run) {
     const error = new Error(`Automation run not found: ${automationRunId}`);
     error.status = 404;
     throw error;
   }
 
-  const policy = loadPolicyOrThrow(run.policyId);
+  const sandbox = isExecutionSandboxed(options);
+
+  try {
+    return await executeApprovedForRunInner(run, automationRunId, options, sandbox);
+  } catch (error) {
+    await updateAutomationRun(automationRunId, {
+      status: "failed",
+      sandbox,
+    }).catch(() => {});
+    throw error;
+  }
+}
+
+async function executeApprovedForRunInner(run, automationRunId, options, sandbox) {
+  const policy = resolvePolicyForAutomationRun(run);
   const capbacResults = Array.isArray(run.capbac?.results) ? run.capbac.results : [];
   const approved = capbacResults.filter((r) => r.decision === "APPROVED");
 
@@ -53,7 +69,7 @@ export async function executeApprovedForRun(automationRunId, options = {}) {
     return {
       engine: "execution",
       automationRunId,
-      sandbox: isExecutionSandboxed(options),
+      sandbox,
       executedAt: new Date().toISOString(),
       results: [],
       summary: { submitted: 0, skipped: 0, failed: 0 },
@@ -61,9 +77,8 @@ export async function executeApprovedForRun(automationRunId, options = {}) {
     };
   }
 
-  updateAutomationRun(automationRunId, { status: "executing" });
+  await updateAutomationRun(automationRunId, { status: "executing" }, DEFER);
 
-  const sandbox = isExecutionSandboxed(options);
   const outcomes = [];
   let submitted = 0;
   let skipped = 0;
@@ -85,7 +100,7 @@ export async function executeApprovedForRun(automationRunId, options = {}) {
 
     if (capbacCheck.result.decision !== "APPROVED") {
       skipped += 1;
-      const record = appendExecutionRecord(automationRunId, {
+      const record = await appendExecutionRecord(automationRunId, {
         recordId: `rec-${Date.now()}-${i}`,
         automationRunId,
         timestamp: new Date().toISOString(),
@@ -97,51 +112,45 @@ export async function executeApprovedForRun(automationRunId, options = {}) {
         notionalUsd: row.notionalUsd,
         reason: capbacCheck.result.reason,
         sandbox,
-      });
+      }, DEFER);
       outcomes.push({ proposalId: row.proposalId, decision: "SKIPPED", record });
       continue;
     }
 
     try {
-      const { price } = await fetchSnapshotPrice(row.symbol);
-      const qty = notionalToQty(row.notionalUsd, price);
       const clientOrderId = buildClientOrderId(automationRunId, row.symbol, i);
-
-      const brokerOrder = await submitBrokerOrder({
+      const fill = await executeMarketOrder({
+        sandbox,
         symbol: row.symbol,
         side: row.side,
-        qty,
-        type: "market",
+        notionalUsd: row.notionalUsd,
         clientOrderId,
-        dryRun: sandbox,
       });
 
       submitted += 1;
-      const brokerOrderId = brokerOrder?.id || brokerOrder?.order_id || null;
-      const status = sandbox ? "dry_run" : mapBrokerStatus(brokerOrder);
 
-      const record = appendExecutionRecord(automationRunId, {
+      const record = await appendExecutionRecord(automationRunId, {
         recordId: `rec-${Date.now()}-${i}`,
         automationRunId,
         timestamp: new Date().toISOString(),
         action: "place",
-        status,
+        status: fill.status,
         proposalId: row.proposalId,
         symbol: row.symbol,
         side: row.side,
-        qty,
+        qty: fill.qty,
         notionalUsd: row.notionalUsd,
-        estimatedPrice: price,
-        clientOrderId,
-        brokerOrderId,
+        estimatedPrice: fill.price,
+        clientOrderId: fill.clientOrderId,
+        brokerOrderId: fill.brokerOrderId,
         sandbox,
-        broker: brokerOrder,
-      });
+        mock: fill.mock,
+      }, DEFER);
 
       outcomes.push({ proposalId: row.proposalId, decision: "SUBMITTED", record });
     } catch (error) {
       failed += 1;
-      const record = appendExecutionRecord(automationRunId, {
+      const record = await appendExecutionRecord(automationRunId, {
         recordId: `rec-${Date.now()}-${i}`,
         automationRunId,
         timestamp: new Date().toISOString(),
@@ -153,29 +162,39 @@ export async function executeApprovedForRun(automationRunId, options = {}) {
         notionalUsd: row.notionalUsd,
         sandbox,
         reason: error.message,
-      });
+      }, DEFER);
       outcomes.push({ proposalId: row.proposalId, decision: "FAILED", record, error: error.message });
     }
   }
 
   const summary = { submitted, skipped, failed };
-  updateAutomationRun(automationRunId, {
-    status: failed && !submitted ? "failed" : "completed",
-    executionSummary: summary,
-  });
+  const executedAt = new Date().toISOString();
+
+  await updateAutomationRun(
+    automationRunId,
+    {
+      status: failed && !submitted ? "failed" : "completed",
+      executionSummary: summary,
+      executedAt,
+      sandbox,
+    },
+    DEFER
+  );
+
+  await flushAutomationPersistence();
 
   return {
     engine: "execution",
     automationRunId,
     sandbox,
-    executedAt: new Date().toISOString(),
+    executedAt,
     results: outcomes,
     summary,
   };
 }
 
 export async function cancelExecutionOrder(automationRunId, recordId) {
-  const record = getExecutionRecord(automationRunId, recordId);
+  const record = await getExecutionRecord(automationRunId, recordId);
   if (!record) {
     const error = new Error("Execution record not found.");
     error.status = 404;
@@ -186,8 +205,11 @@ export async function cancelExecutionOrder(automationRunId, recordId) {
     return { record, alreadyCanceled: true };
   }
 
-  if (record.sandbox && record.status === "dry_run") {
-    const updated = patchExecutionRecord(automationRunId, recordId, {
+  if (
+    record.sandbox &&
+    (record.status === "dry_run" || record.status === "simulated" || record.mock)
+  ) {
+    const updated = await patchExecutionRecord(automationRunId, recordId, {
       action: "cancel",
       status: "canceled",
       reason: "Dry-run order marked canceled in automation journal.",
@@ -202,7 +224,7 @@ export async function cancelExecutionOrder(automationRunId, recordId) {
   }
 
   const canceled = await cancelBrokerOrder(record.brokerOrderId);
-  const updated = patchExecutionRecord(automationRunId, recordId, {
+  const updated = await patchExecutionRecord(automationRunId, recordId, {
     action: "cancel",
     status: mapBrokerStatus(canceled) || "canceled",
     canceledAt: new Date().toISOString(),
@@ -213,7 +235,7 @@ export async function cancelExecutionOrder(automationRunId, recordId) {
 }
 
 export async function syncExecutionRecordStatus(automationRunId, recordId) {
-  const record = getExecutionRecord(automationRunId, recordId);
+  const record = await getExecutionRecord(automationRunId, recordId);
   if (!record?.brokerOrderId) {
     const error = new Error("Record has no broker order to sync.");
     error.status = 400;
@@ -221,7 +243,7 @@ export async function syncExecutionRecordStatus(automationRunId, recordId) {
   }
 
   const brokerOrder = await fetchBrokerOrder(record.brokerOrderId);
-  const updated = patchExecutionRecord(automationRunId, recordId, {
+  const updated = await patchExecutionRecord(automationRunId, recordId, {
     status: mapBrokerStatus(brokerOrder),
     broker: brokerOrder,
   });

@@ -156,6 +156,29 @@ export function loadPolicyOrThrow(policyId) {
   return policy;
 }
 
+/** Use embedded policy on automation runs when in-memory store was cleared (e.g. server restart). */
+export function resolvePolicyForAutomationRun(run) {
+  if (!run?.policyId && !run?.capabilityPolicy) {
+    const error = new Error("Automation run has no capability policy reference.");
+    error.status = 400;
+    throw error;
+  }
+
+  const fromStore = run.policyId ? getPolicyById(run.policyId) : null;
+  if (fromStore) return fromStore;
+
+  if (run.capabilityPolicy) {
+    const policy = validateCapabilityPolicy({
+      ...run.capabilityPolicy,
+      policyId: run.policyId || run.capabilityPolicy.policyId,
+    });
+    createPolicyRecord(policy);
+    return policy;
+  }
+
+  return loadPolicyOrThrow(run.policyId);
+}
+
 export function resolvePolicy({ policyId, policy }) {
   if (policyId) {
     return loadPolicyOrThrow(policyId);

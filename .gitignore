@@ -2,6 +2,9 @@
 /node_modules/
 .env
 
+# Persisted automation run history (local)
+/data/
+
 # Frontend Folder Level
 /frontend/node_modules/*
 /frontend/.env

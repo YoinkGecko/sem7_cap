@@ -5,4 +5,10 @@ export {
   listExecutionRecords,
   isExecutionSandboxed,
 } from "./executionEngine.js";
-export { createAutomationRun, getAutomationRun, listAutomationRuns } from "./automationRunStore.js";
+export {
+  createAutomationRun,
+  getAutomationRun,
+  listAutomationRuns,
+  getAutomationRunDetail,
+  listAutomationHistorySummaries,
+} from "./automationRunStore.js";

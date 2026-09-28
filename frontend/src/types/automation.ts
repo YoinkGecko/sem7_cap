@@ -53,3 +53,28 @@ export interface ExecuteAutomationResponse {
   };
   message?: string;
 }
+
+export interface AutomationHistorySummary {
+  automationRunId: string;
+  createdAt: string;
+  executedAt?: string | null;
+  status: string;
+  strategySummary?: string;
+  budget?: number;
+  symbols?: string[];
+  horizon?: string;
+  plannerSource?: string | null;
+  capbac: { approved: number; denied: number };
+  execution?: { submitted: number; skipped: number; failed: number } | null;
+  sandbox?: boolean | null;
+  orders: { total: number; placed: number; canceled: number };
+}
+
+export interface AutomationRunDetail {
+  run: AutomationRun & {
+    plan?: unknown;
+    capbac?: unknown;
+    userStrategy?: string;
+  };
+  orders: ExecutionOrderRecord[];
+}

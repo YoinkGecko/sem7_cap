@@ -1,6 +1,7 @@
 export {
   saveCapabilityPolicy,
   loadPolicyOrThrow,
+  resolvePolicyForAutomationRun,
   resolvePolicy,
   evaluateTradeProposal,
   evaluateTradeProposals,

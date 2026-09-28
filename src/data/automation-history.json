@@ -1,0 +1,1269 @@
+{
+  "runs": {
+    "auto-1790616439237": {
+      "automationRunId": "auto-1790616439237",
+      "createdAt": "2026-09-28T17:27:19.237Z",
+      "status": "executing",
+      "policyId": "capbac-1790616439216",
+      "planId": "plan-1790616431164",
+      "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+      "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+      "budget": 2000,
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSLA"
+      ],
+      "horizon": "days",
+      "plannerSource": "fallback",
+      "plan": {
+        "planId": "plan-1790616431164",
+        "generatedAt": "2026-09-28T17:27:11.164Z",
+        "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+        "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+        "budget": 2000,
+        "currency": "USD",
+        "allowedSymbols": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "horizon": "days",
+        "monitoring": [
+          "Intraday/daily price change and relative volume for allowed symbols",
+          "Recent headlines and sentiment shifts tied to watchlist names",
+          "Market regime (broad index direction) vs individual symbol momentum",
+          "Time-decay checkpoint before horizon end (days)"
+        ],
+        "entryConditions": [
+          "Symbol is on the allowed list and passes liquidity checks",
+          "Momentum aligns with user strategy description",
+          "Position size fits budget guidance",
+          "Material news supports the directional bias (not rumor-only spikes)",
+          "Short-term trend and RSI/MACD not diverging sharply against the trade"
+        ],
+        "exitConditions": [
+          "Predefined stop-loss or max adverse move for the horizon",
+          "Take-profit or trailing stop when momentum fades",
+          "Exit all positions when the trading horizon expires",
+          "Exit if strategy thesis is invalidated by news or trend reversal"
+        ],
+        "budgetGuidance": {
+          "totalBudget": 2000,
+          "maxPerPositionUsd": 300,
+          "suggestedConcurrentPositions": 3,
+          "reserveCashPct": 15,
+          "notes": "Keep dry powder for volatility. Size positions so a single stop-loss does not consume more than 2–3% of total budget."
+        },
+        "candidateTrades": [
+          {
+            "symbol": "AAPL",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider AAPL only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "MSFT",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider MSFT only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "NVDA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider NVDA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "TSLA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider TSLA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          }
+        ],
+        "noTradeDecision": {
+          "shouldTrade": false,
+          "conditions": [
+            "No symbol shows clear momentum alignment",
+            "News flow is mixed or negative across the watchlist",
+            "Spread/volatility makes risk-reward unfavorable for the horizon"
+          ],
+          "action": "Remain in cash and re-evaluate on the next planner cycle."
+        },
+        "riskNotes": [
+          "Paper-trading plan only; not personalized investment advice.",
+          "Past momentum does not guarantee future returns."
+        ],
+        "assumptions": [
+          "Orders will be executed by a separate execution agent, not by the Planner.",
+          "Budget is notional buying power for allocation planning."
+        ]
+      },
+      "capbac": {
+        "engine": "capbac",
+        "evaluatedAt": "2026-09-28T17:27:19.233Z",
+        "policyId": "capbac-1790616439216",
+        "dailyUsageStart": {
+          "tradeCount": 0,
+          "spendingUsd": 0
+        },
+        "dailyUsageEnd": {
+          "tradeCount": 4,
+          "spendingUsd": 1200
+        },
+        "results": [
+          {
+            "proposalId": "plan-plan-1790616431164-AAPL-0",
+            "symbol": "AAPL",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616431164-MSFT-1",
+            "symbol": "MSFT",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616431164-NVDA-2",
+            "symbol": "NVDA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616431164-TSLA-3",
+            "symbol": "TSLA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          }
+        ],
+        "summary": {
+          "total": 4,
+          "approved": 4,
+          "denied": 0
+        }
+      },
+      "executionSummary": null,
+      "executedAt": null,
+      "sandbox": null
+    },
+    "auto-1790616619393": {
+      "automationRunId": "auto-1790616619393",
+      "createdAt": "2026-09-28T17:30:19.393Z",
+      "status": "executing",
+      "policyId": "capbac-1790616619375",
+      "capabilityPolicy": {
+        "policyId": "capbac-1790616619375",
+        "createdAt": "2026-09-28T17:30:19.393Z",
+        "strategyId": null,
+        "strategyName": "Find short-term opportunities based on momentum and important news. Prefer liqui",
+        "allowedStocks": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "maxOrderValueUsd": 700,
+        "maxPositionSizeUsd": 700,
+        "dailyTradeLimit": 10,
+        "dailySpendingLimitUsd": 1000,
+        "allowShortSelling": false
+      },
+      "planId": "plan-1790616611291",
+      "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+      "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+      "budget": 2000,
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSLA"
+      ],
+      "horizon": "days",
+      "plannerSource": "fallback",
+      "plan": {
+        "planId": "plan-1790616611291",
+        "generatedAt": "2026-09-28T17:30:11.291Z",
+        "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+        "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+        "budget": 2000,
+        "currency": "USD",
+        "allowedSymbols": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "horizon": "days",
+        "monitoring": [
+          "Intraday/daily price change and relative volume for allowed symbols",
+          "Recent headlines and sentiment shifts tied to watchlist names",
+          "Market regime (broad index direction) vs individual symbol momentum",
+          "Time-decay checkpoint before horizon end (days)"
+        ],
+        "entryConditions": [
+          "Symbol is on the allowed list and passes liquidity checks",
+          "Momentum aligns with user strategy description",
+          "Position size fits budget guidance",
+          "Material news supports the directional bias (not rumor-only spikes)",
+          "Short-term trend and RSI/MACD not diverging sharply against the trade"
+        ],
+        "exitConditions": [
+          "Predefined stop-loss or max adverse move for the horizon",
+          "Take-profit or trailing stop when momentum fades",
+          "Exit all positions when the trading horizon expires",
+          "Exit if strategy thesis is invalidated by news or trend reversal"
+        ],
+        "budgetGuidance": {
+          "totalBudget": 2000,
+          "maxPerPositionUsd": 300,
+          "suggestedConcurrentPositions": 3,
+          "reserveCashPct": 15,
+          "notes": "Keep dry powder for volatility. Size positions so a single stop-loss does not consume more than 2–3% of total budget."
+        },
+        "candidateTrades": [
+          {
+            "symbol": "AAPL",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider AAPL only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "MSFT",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider MSFT only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "NVDA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider NVDA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "TSLA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider TSLA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          }
+        ],
+        "noTradeDecision": {
+          "shouldTrade": false,
+          "conditions": [
+            "No symbol shows clear momentum alignment",
+            "News flow is mixed or negative across the watchlist",
+            "Spread/volatility makes risk-reward unfavorable for the horizon"
+          ],
+          "action": "Remain in cash and re-evaluate on the next planner cycle."
+        },
+        "riskNotes": [
+          "Paper-trading plan only; not personalized investment advice.",
+          "Past momentum does not guarantee future returns."
+        ],
+        "assumptions": [
+          "Orders will be executed by a separate execution agent, not by the Planner.",
+          "Budget is notional buying power for allocation planning."
+        ]
+      },
+      "capbac": {
+        "engine": "capbac",
+        "evaluatedAt": "2026-09-28T17:30:19.387Z",
+        "policyId": "capbac-1790616619375",
+        "dailyUsageStart": {
+          "tradeCount": 0,
+          "spendingUsd": 0
+        },
+        "dailyUsageEnd": {
+          "tradeCount": 3,
+          "spendingUsd": 900
+        },
+        "results": [
+          {
+            "proposalId": "plan-plan-1790616611291-AAPL-0",
+            "symbol": "AAPL",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616611291-MSFT-1",
+            "symbol": "MSFT",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616611291-NVDA-2",
+            "symbol": "NVDA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616611291-TSLA-3",
+            "symbol": "TSLA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "DENIED",
+            "violations": [
+              {
+                "code": "DAILY_SPENDING_LIMIT",
+                "message": "Daily spending limit $1000 would be exceeded (projected: $1200)."
+              }
+            ],
+            "reason": "Daily spending limit $1000 would be exceeded (projected: $1200)."
+          }
+        ],
+        "summary": {
+          "total": 4,
+          "approved": 3,
+          "denied": 1
+        }
+      },
+      "executionSummary": null,
+      "executedAt": null,
+      "sandbox": null
+    },
+    "auto-1790616935405": {
+      "automationRunId": "auto-1790616935405",
+      "createdAt": "2026-09-28T17:35:35.405Z",
+      "status": "completed",
+      "policyId": "capbac-1790616935386",
+      "capabilityPolicy": {
+        "policyId": "capbac-1790616935386",
+        "createdAt": "2026-09-28T17:35:35.405Z",
+        "strategyId": null,
+        "strategyName": "Find short-term opportunities based on momentum and important news. Prefer liqui",
+        "allowedStocks": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "maxOrderValueUsd": 700,
+        "maxPositionSizeUsd": 700,
+        "dailyTradeLimit": 10,
+        "dailySpendingLimitUsd": 1000,
+        "allowShortSelling": false
+      },
+      "planId": "plan-1790616927321",
+      "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+      "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+      "budget": 2000,
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSLA"
+      ],
+      "horizon": "days",
+      "plannerSource": "fallback",
+      "plan": {
+        "planId": "plan-1790616927321",
+        "generatedAt": "2026-09-28T17:35:27.321Z",
+        "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+        "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+        "budget": 2000,
+        "currency": "USD",
+        "allowedSymbols": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "horizon": "days",
+        "monitoring": [
+          "Intraday/daily price change and relative volume for allowed symbols",
+          "Recent headlines and sentiment shifts tied to watchlist names",
+          "Market regime (broad index direction) vs individual symbol momentum",
+          "Time-decay checkpoint before horizon end (days)"
+        ],
+        "entryConditions": [
+          "Symbol is on the allowed list and passes liquidity checks",
+          "Momentum aligns with user strategy description",
+          "Position size fits budget guidance",
+          "Material news supports the directional bias (not rumor-only spikes)",
+          "Short-term trend and RSI/MACD not diverging sharply against the trade"
+        ],
+        "exitConditions": [
+          "Predefined stop-loss or max adverse move for the horizon",
+          "Take-profit or trailing stop when momentum fades",
+          "Exit all positions when the trading horizon expires",
+          "Exit if strategy thesis is invalidated by news or trend reversal"
+        ],
+        "budgetGuidance": {
+          "totalBudget": 2000,
+          "maxPerPositionUsd": 300,
+          "suggestedConcurrentPositions": 3,
+          "reserveCashPct": 15,
+          "notes": "Keep dry powder for volatility. Size positions so a single stop-loss does not consume more than 2–3% of total budget."
+        },
+        "candidateTrades": [
+          {
+            "symbol": "AAPL",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider AAPL only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "MSFT",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider MSFT only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "NVDA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider NVDA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "TSLA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider TSLA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          }
+        ],
+        "noTradeDecision": {
+          "shouldTrade": false,
+          "conditions": [
+            "No symbol shows clear momentum alignment",
+            "News flow is mixed or negative across the watchlist",
+            "Spread/volatility makes risk-reward unfavorable for the horizon"
+          ],
+          "action": "Remain in cash and re-evaluate on the next planner cycle."
+        },
+        "riskNotes": [
+          "Paper-trading plan only; not personalized investment advice.",
+          "Past momentum does not guarantee future returns."
+        ],
+        "assumptions": [
+          "Orders will be executed by a separate execution agent, not by the Planner.",
+          "Budget is notional buying power for allocation planning."
+        ]
+      },
+      "capbac": {
+        "engine": "capbac",
+        "evaluatedAt": "2026-09-28T17:35:35.399Z",
+        "policyId": "capbac-1790616935386",
+        "dailyUsageStart": {
+          "tradeCount": 0,
+          "spendingUsd": 0
+        },
+        "dailyUsageEnd": {
+          "tradeCount": 3,
+          "spendingUsd": 900
+        },
+        "results": [
+          {
+            "proposalId": "plan-plan-1790616927321-AAPL-0",
+            "symbol": "AAPL",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616927321-MSFT-1",
+            "symbol": "MSFT",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616927321-NVDA-2",
+            "symbol": "NVDA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790616927321-TSLA-3",
+            "symbol": "TSLA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "DENIED",
+            "violations": [
+              {
+                "code": "DAILY_SPENDING_LIMIT",
+                "message": "Daily spending limit $1000 would be exceeded (projected: $1200)."
+              }
+            ],
+            "reason": "Daily spending limit $1000 would be exceeded (projected: $1200)."
+          }
+        ],
+        "summary": {
+          "total": 4,
+          "approved": 3,
+          "denied": 1
+        }
+      },
+      "executionSummary": {
+        "submitted": 3,
+        "skipped": 0,
+        "failed": 0
+      },
+      "executedAt": "2026-09-28T17:38:38.125Z",
+      "sandbox": false
+    },
+    "auto-1790617010740": {
+      "automationRunId": "auto-1790617010740",
+      "createdAt": "2026-09-28T17:36:50.740Z",
+      "status": "completed",
+      "policyId": "capbac-1790617010739",
+      "capabilityPolicy": {
+        "policyId": "capbac-1790617010739",
+        "createdAt": "2026-09-28T17:36:50.740Z",
+        "strategyId": null,
+        "strategyName": null,
+        "allowedStocks": [
+          "AAPL",
+          "MSFT"
+        ],
+        "maxOrderValueUsd": 700,
+        "maxPositionSizeUsd": 700,
+        "dailyTradeLimit": 10,
+        "dailySpendingLimitUsd": 2000,
+        "allowShortSelling": false
+      },
+      "planId": "plan-1790617010730",
+      "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT with $2,000 over days.",
+      "userStrategy": "momentum news test",
+      "budget": 2000,
+      "symbols": [
+        "AAPL",
+        "MSFT"
+      ],
+      "horizon": "days",
+      "plannerSource": null,
+      "plan": {
+        "planId": "plan-1790617010730",
+        "generatedAt": "2026-09-28T17:36:50.730Z",
+        "userStrategy": "momentum news test",
+        "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT with $2,000 over days.",
+        "budget": 2000,
+        "currency": "USD",
+        "allowedSymbols": [
+          "AAPL",
+          "MSFT"
+        ],
+        "horizon": "days",
+        "monitoring": [
+          "Intraday/daily price change and relative volume for allowed symbols",
+          "Recent headlines and sentiment shifts tied to watchlist names",
+          "Market regime (broad index direction) vs individual symbol momentum",
+          "Time-decay checkpoint before horizon end (days)"
+        ],
+        "entryConditions": [
+          "Symbol is on the allowed list and passes liquidity checks",
+          "Momentum aligns with user strategy description",
+          "Position size fits budget guidance",
+          "Material news supports the directional bias (not rumor-only spikes)",
+          "Short-term trend and RSI/MACD not diverging sharply against the trade"
+        ],
+        "exitConditions": [
+          "Predefined stop-loss or max adverse move for the horizon",
+          "Take-profit or trailing stop when momentum fades",
+          "Exit all positions when the trading horizon expires",
+          "Exit if strategy thesis is invalidated by news or trend reversal"
+        ],
+        "budgetGuidance": {
+          "totalBudget": 2000,
+          "maxPerPositionUsd": 600,
+          "suggestedConcurrentPositions": 2,
+          "reserveCashPct": 15,
+          "notes": "Keep dry powder for volatility. Size positions so a single stop-loss does not consume more than 2–3% of total budget."
+        },
+        "candidateTrades": [
+          {
+            "symbol": "AAPL",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider AAPL only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 500,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "MSFT",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider MSFT only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 500,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          }
+        ],
+        "noTradeDecision": {
+          "shouldTrade": false,
+          "conditions": [
+            "No symbol shows clear momentum alignment",
+            "News flow is mixed or negative across the watchlist",
+            "Spread/volatility makes risk-reward unfavorable for the horizon"
+          ],
+          "action": "Remain in cash and re-evaluate on the next planner cycle."
+        },
+        "riskNotes": [
+          "Paper-trading plan only; not personalized investment advice.",
+          "Past momentum does not guarantee future returns."
+        ],
+        "assumptions": [
+          "Orders will be executed by a separate execution agent, not by the Planner.",
+          "Budget is notional buying power for allocation planning."
+        ]
+      },
+      "capbac": {
+        "engine": "capbac",
+        "evaluatedAt": "2026-09-28T17:36:50.739Z",
+        "policyId": "capbac-1790617010739",
+        "dailyUsageStart": {
+          "tradeCount": 0,
+          "spendingUsd": 0
+        },
+        "dailyUsageEnd": {
+          "tradeCount": 2,
+          "spendingUsd": 1000
+        },
+        "results": [
+          {
+            "proposalId": "plan-plan-1790617010730-AAPL-0",
+            "symbol": "AAPL",
+            "side": "buy",
+            "notionalUsd": 500,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790617010730-MSFT-1",
+            "symbol": "MSFT",
+            "side": "buy",
+            "notionalUsd": 500,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          }
+        ],
+        "summary": {
+          "total": 2,
+          "approved": 2,
+          "denied": 0
+        }
+      },
+      "executionSummary": {
+        "submitted": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      "executedAt": "2026-09-28T17:36:52.291Z",
+      "sandbox": true
+    },
+    "auto-1790617053405": {
+      "automationRunId": "auto-1790617053405",
+      "createdAt": "2026-09-28T17:37:33.405Z",
+      "status": "completed",
+      "policyId": "capbac-1790617053404",
+      "capabilityPolicy": {
+        "policyId": "capbac-1790617053404",
+        "createdAt": "2026-09-28T17:37:33.405Z",
+        "strategyId": null,
+        "strategyName": null,
+        "allowedStocks": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "maxOrderValueUsd": 700,
+        "maxPositionSizeUsd": 700,
+        "dailyTradeLimit": 10,
+        "dailySpendingLimitUsd": 2000,
+        "allowShortSelling": false
+      },
+      "planId": "plan-1790617053383",
+      "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+      "userStrategy": "test",
+      "budget": 2000,
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSLA"
+      ],
+      "horizon": "days",
+      "plannerSource": null,
+      "plan": {
+        "planId": "plan-1790617053383",
+        "generatedAt": "2026-09-28T17:37:33.383Z",
+        "userStrategy": "test",
+        "strategySummary": "Momentum and event-driven monitoring on AAPL, MSFT, NVDA, TSLA with $2,000 over days.",
+        "budget": 2000,
+        "currency": "USD",
+        "allowedSymbols": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "horizon": "days",
+        "monitoring": [
+          "Intraday/daily price change and relative volume for allowed symbols",
+          "Recent headlines and sentiment shifts tied to watchlist names",
+          "Market regime (broad index direction) vs individual symbol momentum",
+          "Time-decay checkpoint before horizon end (days)"
+        ],
+        "entryConditions": [
+          "Symbol is on the allowed list and passes liquidity checks",
+          "Momentum aligns with user strategy description",
+          "Position size fits budget guidance"
+        ],
+        "exitConditions": [
+          "Predefined stop-loss or max adverse move for the horizon",
+          "Take-profit or trailing stop when momentum fades",
+          "Exit all positions when the trading horizon expires",
+          "Exit if strategy thesis is invalidated by news or trend reversal"
+        ],
+        "budgetGuidance": {
+          "totalBudget": 2000,
+          "maxPerPositionUsd": 300,
+          "suggestedConcurrentPositions": 3,
+          "reserveCashPct": 15,
+          "notes": "Keep dry powder for volatility. Size positions so a single stop-loss does not consume more than 2–3% of total budget."
+        },
+        "candidateTrades": [
+          {
+            "symbol": "AAPL",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider AAPL only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "MSFT",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider MSFT only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "NVDA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider NVDA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          },
+          {
+            "symbol": "TSLA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Consider TSLA only if momentum and news align with the stated strategy within the days window.",
+            "suggestedNotionalUsd": 300,
+            "entryTriggers": [
+              "Momentum confirmation",
+              "Supportive news flow",
+              "Volume above recent average"
+            ],
+            "exitTriggers": [
+              "Stop-loss hit",
+              "Target reached",
+              "Horizon end without progress"
+            ]
+          }
+        ],
+        "noTradeDecision": {
+          "shouldTrade": false,
+          "conditions": [
+            "No symbol shows clear momentum alignment",
+            "News flow is mixed or negative across the watchlist",
+            "Spread/volatility makes risk-reward unfavorable for the horizon"
+          ],
+          "action": "Remain in cash and re-evaluate on the next planner cycle."
+        },
+        "riskNotes": [
+          "Paper-trading plan only; not personalized investment advice.",
+          "Past momentum does not guarantee future returns."
+        ],
+        "assumptions": [
+          "Orders will be executed by a separate execution agent, not by the Planner.",
+          "Budget is notional buying power for allocation planning."
+        ]
+      },
+      "capbac": {
+        "engine": "capbac",
+        "evaluatedAt": "2026-09-28T17:37:33.404Z",
+        "policyId": "capbac-1790617053404",
+        "dailyUsageStart": {
+          "tradeCount": 0,
+          "spendingUsd": 0
+        },
+        "dailyUsageEnd": {
+          "tradeCount": 4,
+          "spendingUsd": 1200
+        },
+        "results": [
+          {
+            "proposalId": "plan-plan-1790617053383-AAPL-0",
+            "symbol": "AAPL",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790617053383-MSFT-1",
+            "symbol": "MSFT",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790617053383-NVDA-2",
+            "symbol": "NVDA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790617053383-TSLA-3",
+            "symbol": "TSLA",
+            "side": "buy",
+            "notionalUsd": 300,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          }
+        ],
+        "summary": {
+          "total": 4,
+          "approved": 4,
+          "denied": 0
+        }
+      },
+      "executionSummary": {
+        "submitted": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      "executedAt": "2026-09-28T17:37:33.406Z",
+      "sandbox": true
+    }
+  },
+  "journals": {
+    "auto-1790616439237": [],
+    "auto-1790616619393": [],
+    "auto-1790616935405": [
+      {
+        "recordId": "rec-1790617082272-0",
+        "automationRunId": "auto-1790616935405",
+        "timestamp": "2026-09-28T17:38:02.272Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790616927321-AAPL-0",
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0616935405AAPL0",
+        "brokerOrderId": "sim-1790617082272",
+        "sandbox": true,
+        "mock": true
+      },
+      {
+        "recordId": "rec-1790617082272-1",
+        "automationRunId": "auto-1790616935405",
+        "timestamp": "2026-09-28T17:38:02.272Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790616927321-MSFT-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0616935405MSFT1",
+        "brokerOrderId": "sim-1790617082272",
+        "sandbox": true,
+        "mock": true
+      },
+      {
+        "recordId": "rec-1790617082272-2",
+        "automationRunId": "auto-1790616935405",
+        "timestamp": "2026-09-28T17:38:02.272Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790616927321-NVDA-2",
+        "symbol": "NVDA",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0616935405NVDA2",
+        "brokerOrderId": "sim-1790617082272",
+        "sandbox": true,
+        "mock": true
+      },
+      {
+        "recordId": "rec-1790617114821-0",
+        "automationRunId": "auto-1790616935405",
+        "timestamp": "2026-09-28T17:38:34.821Z",
+        "action": "place",
+        "status": "pending_new",
+        "proposalId": "plan-plan-1790616927321-AAPL-0",
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": 1,
+        "notionalUsd": 300,
+        "estimatedPrice": 340,
+        "clientOrderId": "at0616935405AAPL0",
+        "brokerOrderId": "6bed3dcd-ac64-4dfb-a986-c9b8210536ac",
+        "sandbox": false,
+        "mock": false
+      },
+      {
+        "recordId": "rec-1790617116628-1",
+        "automationRunId": "auto-1790616935405",
+        "timestamp": "2026-09-28T17:38:36.628Z",
+        "action": "place",
+        "status": "pending_new",
+        "proposalId": "plan-plan-1790616927321-MSFT-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "qty": 1,
+        "notionalUsd": 300,
+        "estimatedPrice": 512.15,
+        "clientOrderId": "at0616935405MSFT1",
+        "brokerOrderId": "752ec26c-b117-4cd3-9c6f-c5ffbba51edf",
+        "sandbox": false,
+        "mock": false
+      },
+      {
+        "recordId": "rec-1790617118125-2",
+        "automationRunId": "auto-1790616935405",
+        "timestamp": "2026-09-28T17:38:38.125Z",
+        "action": "place",
+        "status": "pending_new",
+        "proposalId": "plan-plan-1790616927321-NVDA-2",
+        "symbol": "NVDA",
+        "side": "buy",
+        "qty": 1,
+        "notionalUsd": 300,
+        "estimatedPrice": 230.42,
+        "clientOrderId": "at0616935405NVDA2",
+        "brokerOrderId": "64390d67-3d58-4f82-9ab7-1908e04e1e1d",
+        "sandbox": false,
+        "mock": false
+      }
+    ],
+    "auto-1790617010740": [
+      {
+        "recordId": "rec-1790617011500-0",
+        "automationRunId": "auto-1790617010740",
+        "timestamp": "2026-09-28T17:36:51.500Z",
+        "action": "place",
+        "status": "dry_run",
+        "proposalId": "plan-plan-1790617010730-AAPL-0",
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": 1,
+        "notionalUsd": 500,
+        "estimatedPrice": 340.15,
+        "clientOrderId": "at0617010740AAPL0",
+        "sandbox": true
+      },
+      {
+        "recordId": "rec-1790617012290-1",
+        "automationRunId": "auto-1790617010740",
+        "timestamp": "2026-09-28T17:36:52.290Z",
+        "action": "place",
+        "status": "dry_run",
+        "proposalId": "plan-plan-1790617010730-MSFT-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "qty": 1,
+        "notionalUsd": 500,
+        "estimatedPrice": 512.23,
+        "clientOrderId": "at0617010740MSFT1",
+        "sandbox": true
+      }
+    ],
+    "auto-1790617053405": [
+      {
+        "recordId": "rec-1790617053406-0",
+        "automationRunId": "auto-1790617053405",
+        "timestamp": "2026-09-28T17:37:33.406Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790617053383-AAPL-0",
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0617053405AAPL0",
+        "brokerOrderId": "sim-1790617053406",
+        "sandbox": true,
+        "mock": true
+      },
+      {
+        "recordId": "rec-1790617053406-1",
+        "automationRunId": "auto-1790617053405",
+        "timestamp": "2026-09-28T17:37:33.406Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790617053383-MSFT-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0617053405MSFT1",
+        "brokerOrderId": "sim-1790617053406",
+        "sandbox": true,
+        "mock": true
+      },
+      {
+        "recordId": "rec-1790617053406-2",
+        "automationRunId": "auto-1790617053405",
+        "timestamp": "2026-09-28T17:37:33.406Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790617053383-NVDA-2",
+        "symbol": "NVDA",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0617053405NVDA2",
+        "brokerOrderId": "sim-1790617053406",
+        "sandbox": true,
+        "mock": true
+      },
+      {
+        "recordId": "rec-1790617053406-3",
+        "automationRunId": "auto-1790617053405",
+        "timestamp": "2026-09-28T17:37:33.406Z",
+        "action": "place",
+        "status": "simulated",
+        "proposalId": "plan-plan-1790617053383-TSLA-3",
+        "symbol": "TSLA",
+        "side": "buy",
+        "qty": 3,
+        "notionalUsd": 300,
+        "estimatedPrice": 100,
+        "clientOrderId": "at0617053405TSLA3",
+        "brokerOrderId": "sim-1790617053406",
+        "sandbox": true,
+        "mock": true
+      }
+    ]
+  }
+}

@@ -2,6 +2,7 @@ import type { AnalysisPeriod, StockAnalysisResponse } from '@/types/analysis';
 import type { PlannerInput, PlannerResponse } from '@/types/planner';
 import type { IntentBatchResponse } from '@/types/intent';
 import type {
+  CapabilityPolicy,
   CapabilityPolicyInput,
   CapbacEvaluatePlanResponse,
   CapbacPolicyResponse,
@@ -11,6 +12,8 @@ import type { TradingPlan } from '@/types/planner';
 import type {
   AutomationOrdersResponse,
   AutomationRun,
+  AutomationHistorySummary,
+  AutomationRunDetail,
   ExecuteAutomationResponse,
 } from '@/types/automation';
 import type {
@@ -412,11 +415,24 @@ export async function registerAutomationRun(input: {
   plan: TradingPlan;
   capbac: CapbacEvaluatePlanResponse;
   policyId: string;
+  capabilityPolicy: CapabilityPolicy;
+  plannerSource?: string | null;
+  strategyName?: string;
 }): Promise<{ run: AutomationRun }> {
   return request<{ run: AutomationRun }>('/automation/runs', {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export async function getAutomationHistory(): Promise<{ history: AutomationHistorySummary[] }> {
+  return request<{ history: AutomationHistorySummary[] }>('/automation/history');
+}
+
+export async function getAutomationRunDetail(automationRunId: string): Promise<AutomationRunDetail> {
+  return request<AutomationRunDetail>(
+    `/automation/runs/${encodeURIComponent(automationRunId)}/detail`
+  );
 }
 
 export async function getAutomationOrders(automationRunId: string): Promise<AutomationOrdersResponse> {
@@ -434,7 +450,8 @@ export async function executeAutomationRun(
     {
       method: 'POST',
       body: JSON.stringify({ sandbox }),
-    }
+    },
+    300000
   );
 }
 

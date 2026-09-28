@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Bot, LockKeyhole, Shield, Sparkles, Zap, XCircle } from 'lucide-react';
+import { Bot, LockKeyhole, Play, Shield, Sparkles, Zap, XCircle } from 'lucide-react';
 import { Card, CardHeader, Badge, LoadingState, Spinner } from '@/components/common/UI';
 import { useToast } from '@/components/common/Toast';
+import { AutomationHistoryPanel } from '@/components/automation/AutomationHistoryPanel';
 import {
   createTradingPlan,
   ingestIntentNews,
@@ -92,14 +93,16 @@ export function AutomatedTrading() {
   const [executeLoading, setExecuteLoading] = useState(false);
   const [paperLive, setPaperLive] = useState(false);
   const [showJson, setShowJson] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   async function refreshExecutionLedger(runId: string) {
     const ledger = await getAutomationOrders(runId);
     setExecutionLedger(ledger);
   }
 
-  async function handleExecuteApproved() {
-    if (!automationRunId) return;
+  async function handleExecuteApproved(runId?: string) {
+    const id = runId || automationRunId;
+    if (!id) return;
     setExecuteLoading(true);
     setPipeline({
       engine: 'execution',
@@ -108,12 +111,13 @@ export function AutomatedTrading() {
         : 'Sandbox dry-run: translating approved trades to orders (no broker submit)…',
     });
     try {
-      await executeAutomationRun(automationRunId, !paperLive);
-      await refreshExecutionLedger(automationRunId);
+      await executeAutomationRun(id, !paperLive);
+      await refreshExecutionLedger(id);
       setPipeline({
         engine: 'execution',
         step: 'Execution complete — see order ledger for this automation run id.',
       });
+      setHistoryRefresh((n) => n + 1);
       notify('success', paperLive ? 'Orders submitted via Execution Engine.' : 'Sandbox execution logged.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Execution failed.');
@@ -127,14 +131,14 @@ export function AutomatedTrading() {
     try {
       await cancelAutomationOrder(automationRunId, recordId);
       await refreshExecutionLedger(automationRunId);
+      setHistoryRefresh((n) => n + 1);
       notify('success', 'Order marked canceled.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Cancel failed.');
     }
   }
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault();
+  async function runFullPipeline(autoExecute: boolean) {
     const parsedBudget = Number(budget);
     const symbolList = symbols
       .split(/[\s,]+/)
@@ -157,7 +161,7 @@ export function AutomatedTrading() {
       setPipeline({ engine: 'planner', step: 'Validating strategy, budget, symbols, and horizon…' });
       await new Promise((r) => setTimeout(r, 0));
 
-      setPipeline({ engine: 'planner', step: 'Generating structured trading plan (no orders placed)…' });
+      setPipeline({ engine: 'planner', step: 'Generating structured trading plan…' });
       const payload = await createTradingPlan({
         strategy: strategy.trim(),
         budget: parsedBudget,
@@ -170,7 +174,7 @@ export function AutomatedTrading() {
       const intent = await ingestIntentNews(payload.plan.allowedSymbols, 5);
       setIntentResult(intent);
 
-      setPipeline({ engine: 'capbac', step: 'Storing capability policy (allowed symbols, limits, short selling)…' });
+      setPipeline({ engine: 'capbac', step: 'Storing capability policy…' });
       const policyRes = await saveCapbacPolicy({
         allowedStocks: symbolList,
         maxOrderValueUsd: Number(maxOrderValue),
@@ -181,10 +185,7 @@ export function AutomatedTrading() {
         strategyName: strategy.trim().slice(0, 80),
       });
 
-      setPipeline({
-        engine: 'capbac',
-        step: 'Checking each planner proposal against your capability policy…',
-      });
+      setPipeline({ engine: 'capbac', step: 'Checking each planner proposal against your capability policy…' });
       const gate = await evaluateCapbacPlan(payload.plan, policyRes.policy.policyId, {
         tradeCount: 0,
         spendingUsd: 0,
@@ -195,13 +196,30 @@ export function AutomatedTrading() {
         plan: payload.plan,
         capbac: gate,
         policyId: policyRes.policy.policyId,
+        capabilityPolicy: policyRes.policy,
+        plannerSource: payload.source,
+        strategyName: strategy.trim().slice(0, 80),
       });
       setAutomationRunId(run.automationRunId);
       await refreshExecutionLedger(run.automationRunId);
+      setHistoryRefresh((n) => n + 1);
+
+      if (autoExecute) {
+        setLoading(false);
+        if (gate.summary.approved === 0) {
+          notify('error', 'No CapBAC-approved trades to execute.');
+          setPipeline({ engine: 'idle', step: 'Pipeline finished with zero approved trades.' });
+          return;
+        }
+        await handleExecuteApproved(run.automationRunId);
+        setPipeline({ engine: 'execution', step: `Auto Trade complete · run ${run.automationRunId}` });
+        notify('success', 'Auto Trade finished (pipeline + execution).');
+        return;
+      }
 
       setPipeline({
         engine: 'capbac',
-        step: `CapBAC complete · run ${run.automationRunId} · ${gate.summary.approved} approved · ${gate.summary.denied} denied.`,
+        step: `CapBAC complete · run ${run.automationRunId} · ${gate.summary.approved} approved.`,
       });
       notify('success', 'Pipeline ready for Execution Engine.');
     } catch (err) {
@@ -210,6 +228,15 @@ export function AutomatedTrading() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleGenerate(e: React.FormEvent) {
+    e.preventDefault();
+    await runFullPipeline(false);
+  }
+
+  async function handleAutoTrade() {
+    await runFullPipeline(true);
   }
 
   const plan = result?.plan;
@@ -229,6 +256,8 @@ export function AutomatedTrading() {
       </div>
 
       <PipelineBanner status={pipeline} running={loading || executeLoading} />
+
+      <AutomationHistoryPanel refreshToken={historyRefresh} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -333,14 +362,29 @@ export function AutomatedTrading() {
                 Allow short selling
               </label>
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-            >
-              <Sparkles className="h-4 w-4" />
-              {loading ? 'Running pipeline…' : 'Run full pipeline'}
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="submit"
+                disabled={loading || executeLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              >
+                <Sparkles className="h-4 w-4" />
+                {loading ? 'Running…' : 'Run pipeline only'}
+              </button>
+              <button
+                type="button"
+                disabled={loading || executeLoading}
+                onClick={handleAutoTrade}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                <Play className="h-4 w-4" />
+                {loading || executeLoading ? 'Auto trading…' : 'Auto Trade'}
+              </button>
+            </div>
+            <p className="text-xs text-neutral-500">
+              Auto Trade runs the full pipeline then executes approved symbols. Simulated sandbox by default; enable
+              paper broker for real Alpaca paper orders. Keep the API server running on port 3000.
+            </p>
           </form>
         </Card>
 
@@ -503,12 +547,12 @@ export function AutomatedTrading() {
                     onChange={(e) => setPaperLive(e.target.checked)}
                     className="rounded border-neutral-600 bg-neutral-950"
                   />
-                  Submit to paper broker (disable sandbox dry-run)
+                  Submit to paper broker (real Alpaca orders — leave unchecked for simulated sandbox buys)
                 </label>
                 <button
                   type="button"
                   disabled={executeLoading || !capbacResult?.summary.approved}
-                  onClick={handleExecuteApproved}
+                  onClick={() => handleExecuteApproved()}
                   className="inline-flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500 disabled:opacity-50"
                 >
                   <Zap className="h-4 w-4" />

@@ -11,8 +11,11 @@ const router = express.Router();
 
 // POST /api/execution/runs/:automationRunId/execute — sandboxed broker gateway only
 router.post("/runs/:automationRunId/execute", async (req, res) => {
+  req.setTimeout(300000);
+  res.setTimeout(300000);
+
   try {
-    const run = getAutomationRun(req.params.automationRunId);
+    const run = await getAutomationRun(req.params.automationRunId);
     if (!run) {
       return res.status(404).json({ error: "Automation run not found." });
     }
@@ -67,7 +70,9 @@ router.post("/runs/:automationRunId/orders/:recordId/sync", async (req, res) => 
 router.get("/config", (req, res) => {
   res.json({
     sandboxDefault: isExecutionSandboxed(),
-    note: "Only the Execution Engine calls the broker. Set EXECUTION_LIVE=true for paper submits.",
+    mockSandbox: process.env.EXECUTION_MOCK_SANDBOX !== "false",
+    note:
+      "Sandbox uses simulated fills by default (no Alpaca). Check 'Submit to paper broker' for real paper orders.",
   });
 });
 
