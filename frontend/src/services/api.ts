@@ -2,6 +2,13 @@ import type { AnalysisPeriod, StockAnalysisResponse } from '@/types/analysis';
 import type { PlannerInput, PlannerResponse } from '@/types/planner';
 import type { IntentBatchResponse } from '@/types/intent';
 import type {
+  CapabilityPolicyInput,
+  CapbacEvaluatePlanResponse,
+  CapbacPolicyResponse,
+  DailyUsage,
+} from '@/types/capbac';
+import type { TradingPlan } from '@/types/planner';
+import type {
   Account,
   Activity,
   PortfolioHistory,
@@ -71,9 +78,13 @@ export class ApiClientError extends Error {
 
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeoutMs = 90000
 ): Promise<T> {
   let response: Response;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       headers: {
@@ -81,9 +92,15 @@ async function request<T>(
         ...options.headers,
       },
       ...options,
+      signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiClientError(`Request timed out after ${timeoutMs / 1000}s.`, 408);
+    }
     throw new ApiClientError('Unable to connect to trading server.', 0);
+  } finally {
+    clearTimeout(timer);
   }
 
   if (response.status === 204) {
@@ -357,6 +374,28 @@ export async function ingestIntentNews(
   return request<IntentBatchResponse>('/intent/ingest-news', {
     method: 'POST',
     body: JSON.stringify({ symbols, limitPerSymbol }),
+  });
+}
+
+// ============================================================
+// CapBAC Permission Engine
+// ============================================================
+
+export async function saveCapbacPolicy(input: CapabilityPolicyInput): Promise<CapbacPolicyResponse> {
+  return request<CapbacPolicyResponse>('/capbac/policies', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function evaluateCapbacPlan(
+  plan: TradingPlan,
+  policyId: string,
+  dailyUsage?: DailyUsage
+): Promise<CapbacEvaluatePlanResponse> {
+  return request<CapbacEvaluatePlanResponse>('/capbac/evaluate-plan', {
+    method: 'POST',
+    body: JSON.stringify({ policyId, plan, dailyUsage }),
   });
 }
 

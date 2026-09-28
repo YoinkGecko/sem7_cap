@@ -1,8 +1,12 @@
 import { getGeminiModelCandidates, withGeminiModelFallback } from "../../config/gemini.js";
+import { fetchWithTimeout } from "../../utils/fetchWithTimeout.js";
 import { buildFallbackTradingPlan } from "./fallbackPlan.js";
 import { anchorPlan, validatePlannerInput } from "./validateInput.js";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const PLANNER_PROVIDER = (process.env.PLANNER_PROVIDER || "auto").toLowerCase();
+const PLANNER_GEMINI_TIMEOUT_MS = Number(process.env.PLANNER_GEMINI_TIMEOUT_MS) || 12000;
+const PLANNER_GEMINI_MAX_MODELS = Number(process.env.PLANNER_GEMINI_MAX_MODELS) || 2;
 
 const PLAN_JSON_SHAPE = `{
   "strategySummary": "string",
@@ -57,11 +61,15 @@ function extractText(data) {
 async function callGemini(prompt, model) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  });
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    },
+    PLANNER_GEMINI_TIMEOUT_MS
+  );
 
   const raw = await response.text();
   let data;
@@ -172,19 +180,28 @@ Requirements:
 export async function createTradingPlan(rawInput) {
   const input = validatePlannerInput(rawInput);
 
-  if (!GEMINI_API_KEY) {
+  const useGemini =
+    PLANNER_PROVIDER !== "fallback" && Boolean(GEMINI_API_KEY) && PLANNER_PROVIDER !== "off";
+
+  if (!useGemini) {
     return {
       plan: anchorPlan(buildFallbackTradingPlan(input), input),
       source: "fallback",
       model: null,
-      plannerError: "GEMINI_API_KEY not set; using rule-based planner.",
+      plannerError: GEMINI_API_KEY
+        ? "Planner using rule-based fallback (PLANNER_PROVIDER=fallback)."
+        : "GEMINI_API_KEY not set; using rule-based planner.",
     };
   }
 
   try {
-    const { result: text, model } = await withGeminiModelFallback(
-      getGeminiModelCandidates("planner"),
-      (candidateModel) => callGemini(buildPrompt(input), candidateModel)
+    const candidates = getGeminiModelCandidates("planner").slice(
+      0,
+      Math.max(1, PLANNER_GEMINI_MAX_MODELS)
+    );
+
+    const { result: text, model } = await withGeminiModelFallback(candidates, (candidateModel) =>
+      callGemini(buildPrompt(input), candidateModel)
     );
 
     const parsed = parseJsonObject(text);
