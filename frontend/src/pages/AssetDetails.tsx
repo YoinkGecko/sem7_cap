@@ -139,19 +139,20 @@ export function AssetDetails() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className="xl:col-span-3 xl:order-1">
-          <StockAutoTradingHistoryPanel symbol={symbol!} refreshToken={historyRefresh} />
-        </div>
-        <div className="xl:col-span-6 xl:order-2 space-y-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader title="Price Chart" subtitle={`${symbol} · 1Y default · switch timeframe below`} />
             <div className="p-4">
               <PriceChart symbol={symbol!} defaultTimeframe="1Y" height={420} />
             </div>
           </Card>
+          <StockAutoTradingHistoryPanel
+            symbol={symbol!}
+            refreshToken={historyRefresh}
+          />
         </div>
-        <div className="xl:col-span-3 xl:order-3 xl:sticky xl:top-4 xl:self-start space-y-4">
+        <div className="lg:sticky lg:top-4 lg:self-start space-y-4 min-w-0 lg:min-w-[18rem] lg:max-w-[22rem]">
           <OrderTicket symbol={symbol!} latestPrice={price} />
           <StockAutoTradingPanel
             symbol={symbol!}

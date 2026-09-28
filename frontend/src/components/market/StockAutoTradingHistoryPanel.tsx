@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, History } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, History } from 'lucide-react';
 import { getStockAutoHistory } from '@/services/api';
 import type { StockAutoHistorySession } from '@/types/stockAutoSession';
-import { Badge, LoadingState, EmptyState } from '@/components/common/UI';
+import { LoadingState, EmptyState } from '@/components/common/UI';
 import { fmtCurrency, fmtDateTime, fmtSignedCurrency, fmtInt, pctColor } from '@/utils/format';
 
-const STORAGE_KEY = 'stockAutoHistoryPanelOpen';
+const OPEN_KEY = 'stockAutoHistoryPanelOpen';
 
 function readStoredOpen(symbol: string): boolean {
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}:${symbol}`);
+    const raw = localStorage.getItem(`${OPEN_KEY}:${symbol}`);
     if (raw === '0') return false;
     if (raw === '1') return true;
   } catch {
@@ -74,11 +74,11 @@ export function StockAutoTradingHistoryPanel({ symbol, refreshToken = 0 }: Stock
     return () => clearInterval(id);
   }, [load, open]);
 
-  const toggleOpen = () => {
+  const toggleContent = () => {
     setOpen((v) => {
       const next = !v;
       try {
-        localStorage.setItem(`${STORAGE_KEY}:${symbol}`, next ? '1' : '0');
+        localStorage.setItem(`${OPEN_KEY}:${symbol}`, next ? '1' : '0');
       } catch {
         /* ignore */
       }
@@ -88,37 +88,35 @@ export function StockAutoTradingHistoryPanel({ symbol, refreshToken = 0 }: Stock
 
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900">
-      <button
-        type="button"
-        onClick={toggleOpen}
-        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-neutral-800/40"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 shrink-0 text-neutral-400" />
-            <span className="text-sm font-semibold text-neutral-100">Auto trade history</span>
+      <div className="flex items-center justify-between gap-2 border-b border-neutral-800 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <History className="h-4 w-4 shrink-0 text-neutral-400" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-neutral-100">Auto trade history</p>
             {!open && data && data.sessionCount > 0 && (
-              <Badge>{data.sessionCount}</Badge>
+              <p className="truncate text-[11px] text-neutral-500">
+                {data.sessionCount} sessions ·{' '}
+                <span className={pctColor(data.totalFinalPnL)}>
+                  {fmtSignedCurrency(data.totalFinalPnL)} closed P/L
+                </span>
+              </p>
             )}
+            {open && <p className="truncate text-[11px] text-neutral-500">{symbol}</p>}
           </div>
-          <p className="mt-0.5 truncate text-xs text-neutral-500">{symbol}</p>
-          {!open && data && data.sessionCount > 0 && (
-            <p className={`mt-1 text-xs font-medium ${pctColor(data.totalFinalPnL)}`}>
-              Closed P/L {fmtSignedCurrency(data.totalFinalPnL)}
-            </p>
-          )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {open ? (
-            <ChevronDown className="h-4 w-4 text-neutral-500" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-neutral-500" />
-          )}
-        </div>
-      </button>
+        <button
+          type="button"
+          title={open ? 'Collapse history' : 'Expand history'}
+          aria-label={open ? 'Collapse history' : 'Expand history'}
+          onClick={toggleContent}
+          className="rounded p-1.5 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+        >
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      </div>
 
       {open && (
-        <div className="max-h-[520px] overflow-y-auto border-t border-neutral-800 p-3">
+        <div className="max-h-[420px] overflow-y-auto p-3">
           <div className="mb-2 flex justify-end">
             <button type="button" onClick={load} className="text-xs text-sky-400 hover:text-sky-300">
               Refresh
@@ -183,7 +181,7 @@ export function StockAutoTradingHistoryPanel({ symbol, refreshToken = 0 }: Stock
 
                       {rowOpen && (
                         <div className="border-t border-neutral-800 px-3 pb-3 pt-2 text-xs">
-                          <dl className="mb-2 grid grid-cols-2 gap-x-2 gap-y-1 text-neutral-500">
+                          <dl className="mb-2 grid grid-cols-2 gap-x-2 gap-y-1 text-neutral-500 sm:grid-cols-2">
                             <div>Budget {fmtCurrency(session.budgetUsd)}</div>
                             <div>
                               Target +{fmtCurrency(session.profitMinUsd)} / −

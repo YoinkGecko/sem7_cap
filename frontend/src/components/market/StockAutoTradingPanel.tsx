@@ -27,6 +27,9 @@ interface StockAutoTradingPanelProps {
   onSessionChange?: () => void;
 }
 
+const inputClass =
+  'w-full min-w-0 rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm tabular-nums text-neutral-200';
+
 export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: StockAutoTradingPanelProps) {
   const { notify } = useToast();
   const [budget, setBudget] = useState('20000');
@@ -154,7 +157,7 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
     (displayPrice && qty ? displayPrice * qty : undefined);
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+    <div className="min-w-0 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-violet-400" />
@@ -168,11 +171,6 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
           <Badge color="neutral">IDLE</Badge>
         )}
       </div>
-
-      <p className="mb-3 text-xs text-neutral-500">
-        Start buys the <strong className="text-neutral-400">maximum whole shares</strong> for your budget, then
-        monitors P/L every {intervalSec}s. Sells all when profit ≥ target or loss ≥ limit (Alpaca paper).
-      </p>
 
       {lossHit && (
         <div className="mb-3 flex gap-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-xs text-red-200">
@@ -194,111 +192,111 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
         </div>
       )}
 
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-        {/* Left: position & P/L summary */}
-        <div className="min-w-[10rem] flex-1 rounded-md border border-neutral-800 bg-neutral-950/80 p-3">
+      <div className="mb-4 flex flex-col gap-4">
+        <div className="min-w-0 rounded-md border border-neutral-800 bg-neutral-950/80 p-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">Position</p>
           <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Shares</dt>
-              <dd className="font-semibold text-neutral-100">{qty ? fmtInt(qty) : '—'}</dd>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-neutral-500">Shares</dt>
+              <dd className="min-w-0 text-right font-semibold text-neutral-100">{qty ? fmtInt(qty) : '—'}</dd>
             </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Price</dt>
-              <dd className="text-neutral-200">{fmtCurrency(displayPrice)}</dd>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-neutral-500">Price</dt>
+              <dd className="min-w-0 text-right tabular-nums text-neutral-200">{fmtCurrency(displayPrice)}</dd>
             </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Total cost</dt>
-              <dd className="text-neutral-200">{fmtCurrency(totalCost)}</dd>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-neutral-500">Total cost</dt>
+              <dd className="min-w-0 text-right tabular-nums text-neutral-200">{fmtCurrency(totalCost)}</dd>
             </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Market value</dt>
-              <dd className="text-neutral-200">{fmtCurrency(marketValue)}</dd>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-neutral-500">Market value</dt>
+              <dd className="min-w-0 text-right tabular-nums text-neutral-200">{fmtCurrency(marketValue)}</dd>
             </div>
-            <div className="border-t border-neutral-800 pt-2 flex justify-between gap-2">
-              <dt className="text-neutral-500">Current P/L</dt>
-              <dd className={`text-base font-bold ${pctColor(runningPnL)}`}>
+            <div className="flex justify-between gap-3 border-t border-neutral-800 pt-2">
+              <dt className="shrink-0 text-neutral-500">Current P/L</dt>
+              <dd className={`min-w-0 text-right text-base font-bold tabular-nums ${pctColor(runningPnL)}`}>
                 {session ? fmtSignedCurrency(runningPnL) : '—'}
               </dd>
             </div>
           </dl>
           {!session && preview && preview.shares > 0 && (
-            <p className="mt-2 text-xs text-neutral-600">
+            <p className="mt-2 break-words text-xs text-neutral-600">
               Preview @ {fmtCurrency(preview.price)}: {fmtInt(preview.shares)} sh ≈ {fmtCurrency(preview.totalCost)}
             </p>
           )}
         </div>
 
-        {/* Right: config / status */}
-        <div className="flex-1 space-y-3">
+        <div className="min-w-0 space-y-3">
           {!running && (
             <>
               <div>
                 <label className="mb-1 block text-xs text-neutral-500">Trading budget (USD)</label>
                 <input
-                  type="number"
-                  min={100}
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
                   value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
+                  onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ''))}
                   disabled={loading}
-                  className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200"
+                  className={inputClass}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-xs text-neutral-500">Max loss ($)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={maxLoss}
-                    onChange={(e) => setMaxLoss(e.target.value)}
-                    disabled={loading}
-                    className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-neutral-500">Min profit ($)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={profitMin}
-                    onChange={(e) => setProfitMin(e.target.value)}
-                    disabled={loading}
-                    className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200"
-                  />
-                </div>
+              <div>
+                <label className="mb-1 block text-xs text-neutral-500">Max loss ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={maxLoss}
+                  onChange={(e) => setMaxLoss(e.target.value.replace(/[^\d.]/g, ''))}
+                  disabled={loading}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-neutral-500">Min profit ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={profitMin}
+                  onChange={(e) => setProfitMin(e.target.value.replace(/[^\d.]/g, ''))}
+                  disabled={loading}
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-neutral-500">Monitor every (sec)</label>
                 <input
-                  type="number"
-                  min={3}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
                   value={intervalSec}
-                  onChange={(e) => setIntervalSec(e.target.value)}
+                  onChange={(e) => setIntervalSec(e.target.value.replace(/\D/g, ''))}
                   disabled={loading}
-                  className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200"
+                  className={inputClass}
                 />
               </div>
             </>
           )}
 
           {session && (
-            <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-              <div>
-                <dt className="text-neutral-500">Targets</dt>
-                <dd className="text-neutral-300">
+            <dl className="space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-neutral-500">Targets</dt>
+                <dd className="min-w-0 text-right tabular-nums text-neutral-300">
                   +{fmtCurrency(session.profitMinUsd ?? toNum(profitMin))} / −
                   {fmtCurrency(session.maxLossUsd ?? toNum(maxLoss))}
                 </dd>
               </div>
-              <div>
+              <div className="flex justify-between gap-3">
                 <dt className="text-neutral-500">Trades</dt>
                 <dd className="text-neutral-300">{session.tradeCount}</dd>
               </div>
               {session.lastEvaluation?.reason && (
-                <div className="col-span-2">
+                <div>
                   <dt className="text-neutral-500">Last check</dt>
-                  <dd className="text-neutral-400">{session.lastEvaluation.reason}</dd>
+                  <dd className="mt-0.5 break-words text-neutral-400">{session.lastEvaluation.reason}</dd>
                 </div>
               )}
             </dl>
