@@ -12,7 +12,22 @@ import {
   updateSession,
   createSession as storeCreateSession,
   findActiveSessionForSymbol,
+  appendTradeHistory,
+  listHistoryForSymbol,
 } from "./sessionStore.js";
+
+function recordTrade(session, trade) {
+  const enriched = {
+    ...trade,
+    at: trade.at || new Date().toISOString(),
+  };
+  session.lastTrade = enriched;
+  appendTradeHistory(session, enriched);
+}
+
+function sealSessionPnL(session) {
+  session.finalPnL = session.runningPnL ?? 0;
+}
 
 function num(value) {
   const n = Number(value);
@@ -58,6 +73,8 @@ function publicSessionView(session) {
     initialBuyComplete: session.initialBuyComplete,
     lossLimitTriggered: session.status === "LOSS_LIMIT_REACHED",
     profitTargetReached: session.status === "PROFIT_TARGET_REACHED",
+    finalPnL: session.finalPnL,
+    tradeHistory: session.tradeHistory || [],
     tickLog: session.tickLog || [],
   };
 }
@@ -130,11 +147,10 @@ async function performInitialMaxBuy(session) {
   session.sessionEntryAvgPrice = price;
   session.sessionTotalCost = totalCost;
   session.tradeCount = 1;
-  session.lastTrade = {
+  recordTrade(session, {
     ...trade,
-    at: new Date().toISOString(),
     reason: `Max budget buy: ${qty} shares @ ${price.toFixed(2)} ≈ $${totalCost.toFixed(2)}`,
-  };
+  });
   session.currentPrice = price;
   session.positionQty = qty;
   session.positionAvgEntry = price;
@@ -157,6 +173,7 @@ async function performInitialMaxBuy(session) {
 
 async function finalizeStop(session, status, stopReason) {
   stopSessionLoop(session.sessionId);
+  sealSessionPnL(session);
   session.status = status;
   session.stopReason = stopReason;
   session.stoppedAt = new Date().toISOString();
@@ -208,11 +225,11 @@ export async function processSessionTick(sessionId) {
       const closeTrade = await marketSellAll(session, sellQty, price);
       if (closeTrade) {
         session.tradeCount += 1;
-        session.lastTrade = {
-          ...closeTrade,
-          at: new Date().toISOString(),
-          reason: exit.reason,
-        };
+        if (session.sessionEntryAvgPrice && closeTrade.price) {
+          session.runningPnL =
+            (closeTrade.price - session.sessionEntryAvgPrice) * closeTrade.qty;
+        }
+        recordTrade(session, { ...closeTrade, reason: exit.reason });
       }
 
       const status =
@@ -310,15 +327,17 @@ export async function stopStockAutoSession(sessionId, options = {}) {
       const closeTrade = await marketSellAll(session, sellQty, price);
       if (closeTrade) {
         session.tradeCount = (session.tradeCount || 0) + 1;
-        session.lastTrade = {
+        if (session.sessionEntryAvgPrice && closeTrade.price) {
+          session.runningPnL =
+            (closeTrade.price - session.sessionEntryAvgPrice) * closeTrade.qty;
+        }
+        recordTrade(session, {
           ...closeTrade,
-          at: new Date().toISOString(),
           reason: "Manual stop — user chose to sell",
-        };
+        });
         session.sessionEntryQty = 0;
         session.positionQty = 0;
         session.positionMarketValue = 0;
-        session.runningPnL = session.runningPnL ?? 0;
       }
     } catch (e) {
       session.lastError = e.message;
@@ -330,11 +349,16 @@ export async function stopStockAutoSession(sessionId, options = {}) {
     }
   }
 
+  sealSessionPnL(session);
   session.status = "STOPPED";
   session.stopReason = reason;
   session.stoppedAt = new Date().toISOString();
   updateSession(sessionId, session);
   return publicSessionView(session);
+}
+
+export function getStockAutoHistory(symbol) {
+  return listHistoryForSymbol(symbol);
 }
 
 export function getStockAutoSession(sessionId) {

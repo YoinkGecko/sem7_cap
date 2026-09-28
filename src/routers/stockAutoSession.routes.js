@@ -1,12 +1,25 @@
 import express from "express";
 import {
   getActiveStockAutoSession,
+  getStockAutoHistory,
   getStockAutoSession,
   startStockAutoSession,
   stopStockAutoSession,
 } from "../services/stockAutoSession/sessionEngine.js";
 
 const router = express.Router();
+
+// GET /api/stock-auto/history/:symbol
+router.get("/history/:symbol", (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 30, 100);
+    const data = getStockAutoHistory(req.params.symbol);
+    data.sessions = data.sessions.slice(0, limit);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // GET /api/stock-auto/active/:symbol
 router.get("/active/:symbol", (req, res) => {

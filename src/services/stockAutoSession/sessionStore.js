@@ -98,6 +98,8 @@ export function createSession(input) {
     maxLossUsdConfigured: Number(input.maxLossUsd),
     lastTrade: null,
     lastEvaluation: null,
+    tradeHistory: [],
+    finalPnL: null,
     tickLog: [],
   };
 
@@ -139,6 +141,63 @@ export function appendTickLog(session, entry) {
   session.tickLog = session.tickLog || [];
   session.tickLog.unshift(entry);
   if (session.tickLog.length > 20) session.tickLog.length = 20;
+}
+
+export function appendTradeHistory(session, trade) {
+  if (!trade) return;
+  session.tradeHistory = session.tradeHistory || [];
+  session.tradeHistory.push({
+    tradeIndex: session.tradeHistory.length + 1,
+    side: trade.side,
+    qty: trade.qty,
+    price: trade.price,
+    at: trade.at || new Date().toISOString(),
+    reason: trade.reason,
+    status: trade.status,
+    brokerOrderId: trade.brokerOrderId,
+  });
+}
+
+function toHistoryItem(session) {
+  const trades = session.tradeHistory || [];
+  const buy = trades.find((t) => t.side === "buy");
+  const sells = trades.filter((t) => t.side === "sell");
+  return {
+    sessionId: session.sessionId,
+    symbol: session.symbol,
+    status: session.status,
+    startedAt: session.startedAt,
+    stoppedAt: session.stoppedAt,
+    stopReason: session.stopReason,
+    budgetUsd: session.budgetUsd,
+    maxLossUsd: session.maxLossUsd,
+    profitMinUsd: session.profitMinUsd,
+    sharesBought: session.sessionEntryQty ?? buy?.qty ?? 0,
+    avgBuyPrice: session.sessionEntryAvgPrice ?? buy?.price ?? null,
+    totalCost: session.sessionTotalCost ?? (buy ? buy.qty * buy.price : 0),
+    finalPnL: session.finalPnL ?? session.runningPnL ?? 0,
+    tradeCount: session.tradeCount ?? trades.length,
+    trades,
+  };
+}
+
+export function listHistoryForSymbol(symbol, limit = 30) {
+  const sym = String(symbol || "").trim().toUpperCase();
+  const items = Array.from(sessions.values())
+    .filter((s) => s.symbol === sym && s.initialBuyComplete)
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+    .slice(0, limit)
+    .map(toHistoryItem);
+
+  const closed = items.filter((s) => s.status !== "RUNNING");
+  const totalFinalPnL = closed.reduce((sum, s) => sum + (Number(s.finalPnL) || 0), 0);
+
+  return {
+    symbol: sym,
+    sessionCount: items.length,
+    totalFinalPnL,
+    sessions: items,
+  };
 }
 
 export { persistToDisk };

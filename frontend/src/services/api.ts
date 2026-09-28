@@ -19,6 +19,7 @@ import type {
 import type {
   StartStockAutoSessionRequest,
   StockAutoSession,
+  StockAutoHistoryResponse,
 } from '@/types/stockAutoSession';
 import type {
   Account,
@@ -487,6 +488,12 @@ export async function cancelAutomationOrder(automationRunId: string, recordId: s
 export async function getActiveStockAutoSession(symbol: string) {
   return request<{ session: StockAutoSession | null }>(
     `/stock-auto/active/${encodeURIComponent(symbol)}`
+  );
+}
+
+export async function getStockAutoHistory(symbol: string, limit = 30) {
+  return request<StockAutoHistoryResponse>(
+    `/stock-auto/history/${encodeURIComponent(symbol)}${toQuery({ limit })}`
   );
 }
 

@@ -7,6 +7,7 @@ import { Card, CardHeader, LoadingState, ErrorState } from '@/components/common/
 import { PriceChart } from '@/components/market/PriceChart';
 import { OrderTicket } from '@/components/orders/OrderTicket';
 import { StockAutoTradingPanel } from '@/components/market/StockAutoTradingPanel';
+import { StockAutoTradingHistoryPanel } from '@/components/market/StockAutoTradingHistoryPanel';
 import { NewsSection } from '@/components/market/NewsSection';
 import { OptionsSection } from '@/components/market/OptionsSection';
 import { fmtCurrency, fmtPercent, fmtLargeNumber, fmtInt, pctColor, toNum } from '@/utils/format';
@@ -22,6 +23,7 @@ export function AssetDetails() {
   const [bar, setBar] = useState<Bar | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   const refreshLiveQuotes = useCallback(async () => {
     if (!symbol) return;
@@ -137,8 +139,11 @@ export function AssetDetails() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-3 xl:order-1">
+          <StockAutoTradingHistoryPanel symbol={symbol!} refreshToken={historyRefresh} />
+        </div>
+        <div className="xl:col-span-6 xl:order-2 space-y-4">
           <Card>
             <CardHeader title="Price Chart" subtitle={`${symbol} · 1Y default · switch timeframe below`} />
             <div className="p-4">
@@ -146,9 +151,13 @@ export function AssetDetails() {
             </div>
           </Card>
         </div>
-        <div className="lg:sticky lg:top-4 lg:self-start space-y-4">
+        <div className="xl:col-span-3 xl:order-3 xl:sticky xl:top-4 xl:self-start space-y-4">
           <OrderTicket symbol={symbol!} latestPrice={price} />
-          <StockAutoTradingPanel symbol={symbol!} livePrice={price} />
+          <StockAutoTradingPanel
+            symbol={symbol!}
+            livePrice={price}
+            onSessionChange={() => setHistoryRefresh((n) => n + 1)}
+          />
         </div>
       </div>
 

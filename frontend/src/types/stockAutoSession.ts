@@ -54,3 +54,39 @@ export interface StartStockAutoSessionRequest {
   intervalMs?: number;
   usePaperBroker?: boolean;
 }
+
+export interface StockAutoHistoryTrade {
+  tradeIndex?: number;
+  side: 'buy' | 'sell';
+  qty: number;
+  price?: number;
+  at?: string;
+  reason?: string;
+  status?: string;
+  brokerOrderId?: string;
+}
+
+export interface StockAutoHistorySession {
+  sessionId: string;
+  symbol: string;
+  status: StockAutoSessionStatus;
+  startedAt: string;
+  stoppedAt?: string | null;
+  stopReason?: string | null;
+  budgetUsd: number;
+  maxLossUsd: number;
+  profitMinUsd: number;
+  sharesBought: number;
+  avgBuyPrice?: number | null;
+  totalCost: number;
+  finalPnL: number;
+  tradeCount: number;
+  trades: StockAutoHistoryTrade[];
+}
+
+export interface StockAutoHistoryResponse {
+  symbol: string;
+  sessionCount: number;
+  totalFinalPnL: number;
+  sessions: StockAutoHistorySession[];
+}

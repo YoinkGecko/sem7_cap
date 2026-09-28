@@ -24,9 +24,10 @@ function statusBadge(status: StockAutoSession['status']) {
 interface StockAutoTradingPanelProps {
   symbol: string;
   livePrice?: number;
+  onSessionChange?: () => void;
 }
 
-export function StockAutoTradingPanel({ symbol, livePrice }: StockAutoTradingPanelProps) {
+export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: StockAutoTradingPanelProps) {
   const { notify } = useToast();
   const [budget, setBudget] = useState('20000');
   const [maxLoss, setMaxLoss] = useState('100');
@@ -106,6 +107,7 @@ export function StockAutoTradingPanel({ symbol, livePrice }: StockAutoTradingPan
         usePaperBroker: true,
       });
       setSession(s);
+      onSessionChange?.();
       notify(
         'success',
         `Bought max shares for ${symbol}. Monitoring P/L every ${intervalSec}s.`
@@ -129,6 +131,7 @@ export function StockAutoTradingPanel({ symbol, livePrice }: StockAutoTradingPan
           : 'Stopped by user — kept shares',
       });
       setSession(s);
+      onSessionChange?.();
       notify(
         'success',
         sellPosition
