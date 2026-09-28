@@ -1,11 +1,21 @@
 import { useState } from 'react';
-import { Bot, LockKeyhole, Shield, Sparkles } from 'lucide-react';
+import { Bot, LockKeyhole, Shield, Sparkles, Zap, XCircle } from 'lucide-react';
 import { Card, CardHeader, Badge, LoadingState, Spinner } from '@/components/common/UI';
 import { useToast } from '@/components/common/Toast';
-import { createTradingPlan, ingestIntentNews, saveCapbacPolicy, evaluateCapbacPlan } from '@/services/api';
+import {
+  createTradingPlan,
+  ingestIntentNews,
+  saveCapbacPolicy,
+  evaluateCapbacPlan,
+  registerAutomationRun,
+  executeAutomationRun,
+  getAutomationOrders,
+  cancelAutomationOrder,
+} from '@/services/api';
 import type { PlannerResponse, TradingHorizon } from '@/types/planner';
 import type { IntentBatchResponse, PipelineStatus } from '@/types/intent';
 import type { CapbacEvaluatePlanResponse } from '@/types/capbac';
+import type { AutomationOrdersResponse } from '@/types/automation';
 
 const DEFAULT_STRATEGY =
   'Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.';
@@ -15,6 +25,7 @@ const ENGINE_META = {
   planner: { label: 'Planner Agent', icon: Sparkles, accent: 'text-sky-400' },
   intent: { label: 'Intent Engine', icon: Shield, accent: 'text-emerald-400' },
   capbac: { label: 'CapBAC Permission Engine', icon: LockKeyhole, accent: 'text-violet-400' },
+  execution: { label: 'Execution Engine', icon: Zap, accent: 'text-orange-400' },
 } as const;
 
 function defaultCapbacLimits(budgetNum: number) {
@@ -76,7 +87,51 @@ export function AutomatedTrading() {
   const [result, setResult] = useState<PlannerResponse | null>(null);
   const [intentResult, setIntentResult] = useState<IntentBatchResponse | null>(null);
   const [capbacResult, setCapbacResult] = useState<CapbacEvaluatePlanResponse | null>(null);
+  const [automationRunId, setAutomationRunId] = useState<string | null>(null);
+  const [executionLedger, setExecutionLedger] = useState<AutomationOrdersResponse | null>(null);
+  const [executeLoading, setExecuteLoading] = useState(false);
+  const [paperLive, setPaperLive] = useState(false);
   const [showJson, setShowJson] = useState(false);
+
+  async function refreshExecutionLedger(runId: string) {
+    const ledger = await getAutomationOrders(runId);
+    setExecutionLedger(ledger);
+  }
+
+  async function handleExecuteApproved() {
+    if (!automationRunId) return;
+    setExecuteLoading(true);
+    setPipeline({
+      engine: 'execution',
+      step: paperLive
+        ? 'Submitting CapBAC-approved proposals to paper broker…'
+        : 'Sandbox dry-run: translating approved trades to orders (no broker submit)…',
+    });
+    try {
+      await executeAutomationRun(automationRunId, !paperLive);
+      await refreshExecutionLedger(automationRunId);
+      setPipeline({
+        engine: 'execution',
+        step: 'Execution complete — see order ledger for this automation run id.',
+      });
+      notify('success', paperLive ? 'Orders submitted via Execution Engine.' : 'Sandbox execution logged.');
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'Execution failed.');
+    } finally {
+      setExecuteLoading(false);
+    }
+  }
+
+  async function handleCancelExecutionRecord(recordId: string) {
+    if (!automationRunId) return;
+    try {
+      await cancelAutomationOrder(automationRunId, recordId);
+      await refreshExecutionLedger(automationRunId);
+      notify('success', 'Order marked canceled.');
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'Cancel failed.');
+    }
+  }
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -95,6 +150,8 @@ export function AutomatedTrading() {
     setResult(null);
     setIntentResult(null);
     setCapbacResult(null);
+    setAutomationRunId(null);
+    setExecutionLedger(null);
 
     try {
       setPipeline({ engine: 'planner', step: 'Validating strategy, budget, symbols, and horizon…' });
@@ -134,11 +191,19 @@ export function AutomatedTrading() {
       });
       setCapbacResult(gate);
 
+      const { run } = await registerAutomationRun({
+        plan: payload.plan,
+        capbac: gate,
+        policyId: policyRes.policy.policyId,
+      });
+      setAutomationRunId(run.automationRunId);
+      await refreshExecutionLedger(run.automationRunId);
+
       setPipeline({
         engine: 'capbac',
-        step: `CapBAC complete · ${gate.summary.approved} approved · ${gate.summary.denied} denied (ready for future execution engine).`,
+        step: `CapBAC complete · run ${run.automationRunId} · ${gate.summary.approved} approved · ${gate.summary.denied} denied.`,
       });
-      notify('success', 'Pipeline finished through CapBAC.');
+      notify('success', 'Pipeline ready for Execution Engine.');
     } catch (err) {
       setPipeline({ engine: 'idle', step: 'Pipeline stopped due to an error.' });
       notify('error', err instanceof Error ? err.message : 'Pipeline failed.');
@@ -158,13 +223,12 @@ export function AutomatedTrading() {
         <div>
           <h1 className="text-lg font-semibold text-neutral-100">Automated Trading</h1>
           <p className="mt-0.5 max-w-2xl text-sm text-neutral-500">
-            Planner builds the strategy. Intent Engine sanitizes external content. CapBAC gates every proposal before
-            execution. No engine places orders yet.
+            Planner → Intent → CapBAC → Execution. Only the sandboxed Execution Engine may call the broker API.
           </p>
         </div>
       </div>
 
-      <PipelineBanner status={pipeline} running={loading} />
+      <PipelineBanner status={pipeline} running={loading || executeLoading} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -280,6 +344,7 @@ export function AutomatedTrading() {
           </form>
         </Card>
 
+        <div className="space-y-6">
         <Card>
           <CardHeader
             title="Trading plan"
@@ -318,7 +383,7 @@ export function AutomatedTrading() {
             )}
             {plan && showJson && (
               <pre className="max-h-[520px] overflow-auto rounded-md bg-neutral-950 p-3 text-xs text-neutral-300">
-                {JSON.stringify({ planner: result, intent: intentResult, capbac: capbacResult }, null, 2)}
+                {JSON.stringify({ planner: result, intent: intentResult, capbac: capbacResult, automationRunId, executionLedger }, null, 2)}
               </pre>
             )}
             {plan && !showJson && (
@@ -404,6 +469,96 @@ export function AutomatedTrading() {
             )}
           </div>
         </Card>
+
+        <Card>
+          <CardHeader
+            title="Execution ledger"
+            subtitle={
+              automationRunId
+                ? `Automation run ${automationRunId}`
+                : 'Run the pipeline to get an automation id'
+            }
+          />
+          <div className="p-4 space-y-4">
+            {!automationRunId && (
+              <p className="text-sm text-neutral-500">
+                Orders placed or canceled for an automated run appear here, keyed by automation run id.
+              </p>
+            )}
+            {automationRunId && (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge color="blue">{automationRunId}</Badge>
+                  {executionLedger && (
+                    <span className="text-xs text-neutral-500">
+                      {executionLedger.summary.placed} placed · {executionLedger.summary.canceled} canceled ·{' '}
+                      {executionLedger.summary.failed} failed
+                    </span>
+                  )}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-neutral-300">
+                  <input
+                    type="checkbox"
+                    checked={paperLive}
+                    onChange={(e) => setPaperLive(e.target.checked)}
+                    className="rounded border-neutral-600 bg-neutral-950"
+                  />
+                  Submit to paper broker (disable sandbox dry-run)
+                </label>
+                <button
+                  type="button"
+                  disabled={executeLoading || !capbacResult?.summary.approved}
+                  onClick={handleExecuteApproved}
+                  className="inline-flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500 disabled:opacity-50"
+                >
+                  <Zap className="h-4 w-4" />
+                  Execute CapBAC-approved trades
+                </button>
+                {!executionLedger?.orders.length ? (
+                  <p className="text-sm text-neutral-500">No execution records yet for this run.</p>
+                ) : (
+                  <div className="divide-y divide-neutral-800 rounded-md border border-neutral-800">
+                    {executionLedger.orders.map((row) => (
+                      <div key={row.recordId} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-neutral-100">{row.symbol}</span>
+                            <Badge color={row.side === 'buy' ? 'green' : 'red'}>{row.side}</Badge>
+                            <Badge>{row.action}</Badge>
+                            <Badge color={row.status === 'canceled' || row.status === 'failed' ? 'red' : 'green'}>
+                              {row.status}
+                            </Badge>
+                            {row.qty != null && (
+                              <span className="text-xs text-neutral-500">qty {row.qty}</span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            {row.clientOrderId || row.proposalId}
+                            {row.brokerOrderId ? ` · broker ${row.brokerOrderId}` : ''}
+                          </p>
+                          {row.reason && <p className="mt-1 text-xs text-neutral-400">{row.reason}</p>}
+                        </div>
+                        {row.action === 'place' &&
+                          row.status !== 'canceled' &&
+                          row.status !== 'failed' && (
+                            <button
+                              type="button"
+                              onClick={() => handleCancelExecutionRecord(row.recordId)}
+                              className="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-300"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Cancel
+                            </button>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+        </div>
       </div>
 
       {capbacResult && (

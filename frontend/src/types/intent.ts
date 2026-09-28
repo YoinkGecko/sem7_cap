@@ -36,7 +36,7 @@ export interface IntentBatchResponse {
   fetchNotice?: string | null;
 }
 
-export type PipelineEngineId = 'idle' | 'planner' | 'intent' | 'capbac';
+export type PipelineEngineId = 'idle' | 'planner' | 'intent' | 'capbac' | 'execution';
 
 export interface PipelineStatus {
   engine: PipelineEngineId;

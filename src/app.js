@@ -10,6 +10,8 @@ import analysisRouter from "./routers/analysis.routes.js";
 import plannerRouter from "./routers/planner.routes.js";
 import intentRouter from "./routers/intent.routes.js";
 import capbacRouter from "./routers/capbac.routes.js";
+import automationRouter from "./routers/automation.routes.js";
+import executionRouter from "./routers/execution.routes.js";
 
 const app = express();
 
@@ -41,6 +43,8 @@ app.use("/api/analysis", analysisRouter);
 app.use("/api/planner", plannerRouter);
 app.use("/api/intent", intentRouter);
 app.use("/api/capbac", capbacRouter);
+app.use("/api/automation", automationRouter);
+app.use("/api/execution", executionRouter);
 
 app.get("/health", (req, res) => {
   res.json({

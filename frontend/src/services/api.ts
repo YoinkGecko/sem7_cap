@@ -9,6 +9,11 @@ import type {
 } from '@/types/capbac';
 import type { TradingPlan } from '@/types/planner';
 import type {
+  AutomationOrdersResponse,
+  AutomationRun,
+  ExecuteAutomationResponse,
+} from '@/types/automation';
+import type {
   Account,
   Activity,
   PortfolioHistory,
@@ -397,6 +402,47 @@ export async function evaluateCapbacPlan(
     method: 'POST',
     body: JSON.stringify({ policyId, plan, dailyUsage }),
   });
+}
+
+// ============================================================
+// Automation runs & Execution Engine (broker gateway only)
+// ============================================================
+
+export async function registerAutomationRun(input: {
+  plan: TradingPlan;
+  capbac: CapbacEvaluatePlanResponse;
+  policyId: string;
+}): Promise<{ run: AutomationRun }> {
+  return request<{ run: AutomationRun }>('/automation/runs', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getAutomationOrders(automationRunId: string): Promise<AutomationOrdersResponse> {
+  return request<AutomationOrdersResponse>(
+    `/automation/runs/${encodeURIComponent(automationRunId)}/orders`
+  );
+}
+
+export async function executeAutomationRun(
+  automationRunId: string,
+  sandbox = true
+): Promise<ExecuteAutomationResponse> {
+  return request<ExecuteAutomationResponse>(
+    `/execution/runs/${encodeURIComponent(automationRunId)}/execute`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ sandbox }),
+    }
+  );
+}
+
+export async function cancelAutomationOrder(automationRunId: string, recordId: string) {
+  return request<{ record: unknown }>(
+    `/execution/runs/${encodeURIComponent(automationRunId)}/orders/${encodeURIComponent(recordId)}/cancel`,
+    { method: 'POST', body: JSON.stringify({}) }
+  );
 }
 
 // ============================================================

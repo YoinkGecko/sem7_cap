@@ -4,7 +4,7 @@ import { runCommand } from "../config/command.js";
 const router = express.Router();
 
 
-// POST /api/orders
+// POST /api/orders — manual terminal orders (automated flow must use /api/execution)
 router.post("/", async (req, res) => {
   try {
     const {
