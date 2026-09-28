@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, FileBarChart } from 'lucide-react';
 import { getAsset, getSnapshot, getLatestQuote, getLatestTrade, getLatestBar } from '@/services/api';
@@ -10,6 +10,8 @@ import { NewsSection } from '@/components/market/NewsSection';
 import { OptionsSection } from '@/components/market/OptionsSection';
 import { fmtCurrency, fmtPercent, fmtLargeNumber, fmtInt, pctColor, toNum } from '@/utils/format';
 
+const PRICE_POLL_MS = 5000;
+
 export function AssetDetails() {
   const { symbol } = useParams<{ symbol: string }>();
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -19,6 +21,24 @@ export function AssetDetails() {
   const [bar, setBar] = useState<Bar | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshLiveQuotes = useCallback(async () => {
+    if (!symbol) return;
+    try {
+      const [s, q, t, b] = await Promise.all([
+        getSnapshot(symbol).catch(() => null),
+        getLatestQuote(symbol).catch(() => null),
+        getLatestTrade(symbol).catch(() => null),
+        getLatestBar(symbol).catch(() => null),
+      ]);
+      if (s) setSnapshot(s);
+      if (q) setQuote(q);
+      if (t) setTrade(t);
+      if (b) setBar(b);
+    } catch {
+      /* keep last known values on poll failure */
+    }
+  }, [symbol]);
 
   const fetch = async () => {
     if (!symbol) return;
@@ -44,7 +64,15 @@ export function AssetDetails() {
     }
   };
 
-  useEffect(() => { fetch(); }, [symbol]);
+  useEffect(() => {
+    fetch();
+  }, [symbol]);
+
+  useEffect(() => {
+    if (!symbol) return;
+    const interval = setInterval(refreshLiveQuotes, PRICE_POLL_MS);
+    return () => clearInterval(interval);
+  }, [symbol, refreshLiveQuotes]);
 
   if (loading) return <div className="p-6"><LoadingState text="Loading asset data..." /></div>;
   if (error) return <div className="p-6"><ErrorState message={error} onRetry={fetch} /></div>;
