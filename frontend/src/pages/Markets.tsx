@@ -1,6 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMovers, getMostActives, getSnapshot, type ScreenerItem } from '@/services/api';
+import {
+  getAsset,
+  getMovers,
+  getMostActives,
+  getSnapshot,
+  searchAssets,
+  type Asset,
+  type ScreenerItem,
+} from '@/services/api';
+import { FEATURED_EQUITY_SYMBOLS } from '@/constants/featuredSymbols';
 import { Card, CardHeader, LoadingState, ErrorState, EmptyState } from '@/components/common/UI';
 import { fmtCurrency, fmtPercent, fmtLargeNumber, pctColor, toNum } from '@/utils/format';
 import { screenerChange, screenerChangePct, screenerPrice } from '@/utils/marketData';
@@ -18,21 +27,35 @@ function dedupeBySymbol(items: ScreenerItem[]): ScreenerItem[] {
   return Array.from(map.values());
 }
 
+function assetToScreenerItem(asset: Asset): ScreenerItem {
+  return {
+    symbol: asset.symbol?.toUpperCase(),
+    name: asset.name,
+  };
+}
+
 async function enrichWithSnapshots(items: ScreenerItem[]): Promise<ScreenerItem[]> {
   return Promise.all(
     items.map(async (item) => {
       if (!item.symbol) return item;
       const price = screenerPrice(item);
       const changePct = screenerChangePct(item);
-      if (price != null && changePct != null) return item;
+      if (price != null && changePct != null && item.name) return item;
 
       try {
-        const snap = await getSnapshot(item.symbol);
+        const [snap, asset] = await Promise.all([
+          price != null && changePct != null ? Promise.resolve(null) : getSnapshot(item.symbol),
+          item.name ? Promise.resolve(null) : getAsset(item.symbol).catch(() => null),
+        ]);
         return {
           ...item,
-          price: price ?? snap.price ?? toNum(snap.latest_trade?.p ?? snap.latest_trade?.price),
-          change: screenerChange(item) ?? snap.change ?? snap.day_change,
-          change_pct: changePct ?? snap.change_pct ?? snap.day_change_pct,
+          name: item.name || asset?.name,
+          price:
+            price ??
+            snap?.price ??
+            toNum(snap?.latest_trade?.p ?? snap?.latest_trade?.price),
+          change: screenerChange(item) ?? snap?.change ?? snap?.day_change,
+          change_pct: changePct ?? snap?.change_pct ?? snap?.day_change_pct,
         };
       } catch {
         return item;
@@ -41,12 +64,38 @@ async function enrichWithSnapshots(items: ScreenerItem[]): Promise<ScreenerItem[
   );
 }
 
+async function loadFeaturedItems(existing: Set<string>): Promise<ScreenerItem[]> {
+  const symbols = FEATURED_EQUITY_SYMBOLS.filter((sym) => !existing.has(sym));
+  const rows = await Promise.all(
+    symbols.map(async (symbol) => {
+      try {
+        const [asset, snap] = await Promise.all([
+          getAsset(symbol).catch(() => null),
+          getSnapshot(symbol).catch(() => null),
+        ]);
+        return {
+          symbol,
+          name: asset?.name,
+          price: snap?.price ?? toNum(snap?.latest_trade?.p ?? snap?.latest_trade?.price),
+          change: snap?.change ?? snap?.day_change,
+          change_pct: snap?.change_pct ?? snap?.day_change_pct,
+        } satisfies ScreenerItem;
+      } catch {
+        return { symbol, name: symbol } satisfies ScreenerItem;
+      }
+    })
+  );
+  return rows;
+}
+
 export function Markets() {
   const navigate = useNavigate();
   const [items, setItems] = useState<ScreenerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [catalogHits, setCatalogHits] = useState<ScreenerItem[]>([]);
   const debouncedQuery = useDebounce(query, 300);
 
   const fetch = async () => {
@@ -58,7 +107,9 @@ export function Markets() {
         getMostActives().catch(() => [] as ScreenerItem[]),
       ]);
       const merged = dedupeBySymbol([...movers, ...actives]);
-      setItems(await enrichWithSnapshots(merged));
+      const existing = new Set(merged.map((i) => i.symbol?.toUpperCase()).filter(Boolean) as string[]);
+      const featured = await loadFeaturedItems(existing);
+      setItems(await enrichWithSnapshots(dedupeBySymbol([...merged, ...featured])));
     } catch {
       setError('Unable to load market data.');
     } finally {
@@ -70,19 +121,62 @@ export function Markets() {
     fetch();
   }, []);
 
+  useEffect(() => {
+    const q = debouncedQuery.trim();
+    if (!q) {
+      setCatalogHits([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+    searchAssets(q, 50)
+      .then(async (assets) => {
+        if (cancelled) return;
+        const base = assets.map(assetToScreenerItem);
+        setCatalogHits(await enrichWithSnapshots(base));
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogHits([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSearchLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery]);
+
   const filtered = useMemo(() => {
-    if (!debouncedQuery) return items;
-    const q = debouncedQuery.toLowerCase();
-    return items.filter((item) => {
+    const q = debouncedQuery.trim().toLowerCase();
+    if (!q) return items;
+
+    const local = items.filter((item) => {
       const sym = (item.symbol || '').toLowerCase();
       const name = (item.name || '').toLowerCase();
       return sym.includes(q) || name.includes(q);
     });
-  }, [items, debouncedQuery]);
+
+    return dedupeBySymbol([...local, ...catalogHits]);
+  }, [items, catalogHits, debouncedQuery]);
 
   const openSymbol = (symbol: string) => {
     if (!symbol) return;
-    navigate(`/markets/${symbol}`);
+    navigate(`/markets/${symbol.toUpperCase()}`);
+  };
+
+  const onSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const raw = query.trim();
+    if (!raw) return;
+    const ticker = raw.toUpperCase().replace(/\s+/g, '');
+    if (/^[A-Z0-9.]{1,8}$/.test(ticker)) {
+      openSymbol(ticker);
+    } else if (filtered[0]?.symbol) {
+      openSymbol(filtered[0].symbol);
+    }
   };
 
   return (
@@ -90,7 +184,7 @@ export function Markets() {
       <div>
         <h1 className="text-lg font-semibold text-neutral-100">Markets</h1>
         <p className="text-sm text-neutral-500 mt-0.5">
-          Explore stocks, movers, and most active securities. Click a row to open the chart and trade.
+          Movers, featured large caps, and search across active US stocks. Click a row or press Enter to open chart &amp; trade.
         </p>
       </div>
 
@@ -100,26 +194,37 @@ export function Markets() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by symbol or name..."
+          onKeyDown={onSearchKeyDown}
+          placeholder="Search MSFT, Tesla, symbol or company name…"
           className="w-full rounded-md border border-neutral-800 bg-neutral-900 py-2 pl-9 pr-3 text-sm text-neutral-200 placeholder-neutral-600 focus:border-sky-700 focus:outline-none"
         />
+        {searchLoading && debouncedQuery.trim() && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500">Searching…</span>
+        )}
       </div>
 
       <Card>
-        <CardHeader title="Stocks" subtitle={`${filtered.length} results · select a symbol for 1Y chart & trading`} />
+        <CardHeader
+          title="Stocks"
+          subtitle={
+            debouncedQuery.trim()
+              ? `${filtered.length} matches · Enter to open ticker`
+              : `${filtered.length} symbols · featured + movers + most active`
+          }
+        />
         {loading ? (
           <LoadingState />
         ) : error ? (
           <ErrorState message={error} onRetry={fetch} />
         ) : filtered.length === 0 ? (
-          <EmptyState message="No matching stocks found" />
+          <EmptyState message="No matching stocks. Try a symbol (e.g. MSFT) or company name." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-neutral-800 text-xs text-neutral-500">
                   <th className="px-4 py-2 text-left font-medium">Symbol</th>
-                  <th className="px-4 py-2 text-left font-medium">Name</th>
+                  <th className="px-4 py-2 text-left font-medium">Company</th>
                   <th className="px-4 py-2 text-right font-medium">Price</th>
                   <th className="px-4 py-2 text-right font-medium">Change</th>
                   <th className="px-4 py-2 text-right font-medium">Change %</th>
@@ -133,6 +238,7 @@ export function Markets() {
                   const changePct = screenerChangePct(item);
                   const change = screenerChange(item);
                   const price = screenerPrice(item);
+                  const companyName = item.name && item.name !== symbol ? item.name : '—';
                   return (
                     <tr
                       key={symbol}
@@ -140,7 +246,9 @@ export function Markets() {
                       className="cursor-pointer border-b border-neutral-800/50 hover:bg-neutral-800/40"
                     >
                       <td className="px-4 py-2.5 font-medium text-sky-400">{symbol}</td>
-                      <td className="px-4 py-2.5 text-neutral-400 max-w-[200px] truncate">{item.name || symbol}</td>
+                      <td className="px-4 py-2.5 text-neutral-300 max-w-xs truncate" title={companyName}>
+                        {companyName}
+                      </td>
                       <td className="px-4 py-2.5 text-right text-neutral-300">{fmtCurrency(price)}</td>
                       <td className={`px-4 py-2.5 text-right ${pctColor(change)}`}>{fmtCurrency(change)}</td>
                       <td className={`px-4 py-2.5 text-right ${pctColor(changePct)}`}>{fmtPercent(changePct)}</td>

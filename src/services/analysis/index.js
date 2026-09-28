@@ -1,4 +1,4 @@
-import { runCommand } from "../../config/command.js";
+import { getAssetBySymbol } from "../assetCatalog.js";
 import { withAnalysisCache } from "./cache.js";
 import { buildGeminiInput, buildStockAnalysis } from "./engine.js";
 import { generateAnalysisReport } from "./geminiReport.js";
@@ -6,9 +6,8 @@ import { normalizePeriod, validateSymbol } from "./periods.js";
 
 async function fetchAssetName(symbol) {
   try {
-    const result = await runCommand(["asset", "get", "--symbol", symbol]);
-    const asset = JSON.parse(result);
-    return asset.name || asset.symbol || symbol;
+    const asset = await getAssetBySymbol(symbol);
+    return asset?.name || asset?.symbol || symbol;
   } catch {
     return symbol;
   }

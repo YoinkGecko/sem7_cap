@@ -213,6 +213,15 @@ export const getAssets = () => request<Asset[] | { assets?: Asset[] }>('/assets'
 export const getAsset = (symbol: string) =>
   request<Asset>(`/assets/${encodeURIComponent(symbol)}`);
 
+export async function searchAssets(query: string, limit = 40): Promise<Asset[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const data = await request<{ assets?: Asset[] }>(
+    `/assets/search${toQuery({ q, limit })}`
+  );
+  return data.assets ?? [];
+}
+
 // ============================================================
 // Market Data
 // ============================================================
