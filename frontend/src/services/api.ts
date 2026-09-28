@@ -20,6 +20,8 @@ import type {
   Account,
   Activity,
   PortfolioHistory,
+  Position,
+  PositionsResponse,
   Order,
   CreateOrderRequest,
   ReplaceOrderRequest,
@@ -51,6 +53,8 @@ export type {
   Account,
   Activity,
   PortfolioHistory,
+  Position,
+  PositionsResponse,
   Order,
   OrderSide,
   OrderType,
@@ -158,6 +162,7 @@ function num(v: string | number | undefined | null): number | undefined {
 export const getAccount = () => request<Account>('/account');
 export const getAccountActivity = () => request<Activity[]>('/account/activity');
 export const getPortfolio = () => request<PortfolioHistory>('/account/portfolio');
+export const getPositions = () => request<PositionsResponse>('/account/positions');
 
 // ============================================================
 // Orders

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAccount, getPortfolio, type Account, type PortfolioHistory } from '@/services/api';
+import { HoldingsTable } from '@/components/dashboard/HoldingsTable';
 import { Card, CardHeader, LoadingState, ErrorState, EmptyState } from '@/components/common/UI';
 import { fmtCurrency, fmtSignedCurrency, fmtPercent, toNum, pctColor } from '@/utils/format';
 import { Briefcase, Wallet, DollarSign, TrendingUp } from 'lucide-react';
@@ -127,6 +128,8 @@ export function Portfolio() {
         </div>
       </Card>
 
+      <HoldingsTable />
+
       <Card>
         <CardHeader title="Account Summary" subtitle="Position and margin details" />
         <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -138,13 +141,6 @@ export function Portfolio() {
           <StatItem label="Multiplier" value={account?.multiplier ? String(account.multiplier) : '--'} />
           <StatItem label="Status" value={account?.status || '--'} />
           <StatItem label="Currency" value={account?.currency || '--'} />
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Holdings" subtitle="Current positions" />
-        <div className="p-4">
-          <EmptyState message="Positions are derived from your account data. If the backend provides position-level data, it will appear here." />
         </div>
       </Card>
     </div>

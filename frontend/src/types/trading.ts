@@ -65,6 +65,25 @@ export interface PortfolioHistory {
   timeframe?: string;
 }
 
+export interface Position {
+  symbol: string;
+  qty?: number;
+  side?: string;
+  avg_entry_price?: number;
+  current_price?: number;
+  market_value?: number;
+  cost_basis?: number;
+  unrealized_pl?: number;
+  /** Decimal fraction from Alpaca (e.g. 0.029 = 2.9%) */
+  unrealized_plpc?: number;
+  change_today?: number;
+  unrealized_intraday_pl?: number;
+}
+
+export interface PositionsResponse {
+  positions: Position[];
+}
+
 // ============================================================
 // Orders
 // ============================================================
