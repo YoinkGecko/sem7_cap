@@ -6,6 +6,7 @@ import type { Asset, Snapshot, Quote, Trade, Bar } from '@/types/trading';
 import { Card, CardHeader, LoadingState, ErrorState } from '@/components/common/UI';
 import { PriceChart } from '@/components/market/PriceChart';
 import { OrderTicket } from '@/components/orders/OrderTicket';
+import { StockAutoTradingPanel } from '@/components/market/StockAutoTradingPanel';
 import { NewsSection } from '@/components/market/NewsSection';
 import { OptionsSection } from '@/components/market/OptionsSection';
 import { fmtCurrency, fmtPercent, fmtLargeNumber, fmtInt, pctColor, toNum } from '@/utils/format';
@@ -145,8 +146,9 @@ export function AssetDetails() {
             </div>
           </Card>
         </div>
-        <div className="lg:sticky lg:top-4 lg:self-start">
+        <div className="lg:sticky lg:top-4 lg:self-start space-y-4">
           <OrderTicket symbol={symbol!} latestPrice={price} />
+          <StockAutoTradingPanel symbol={symbol!} livePrice={price} />
         </div>
       </div>
 

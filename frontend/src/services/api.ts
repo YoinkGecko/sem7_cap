@@ -17,6 +17,10 @@ import type {
   ExecuteAutomationResponse,
 } from '@/types/automation';
 import type {
+  StartStockAutoSessionRequest,
+  StockAutoSession,
+} from '@/types/stockAutoSession';
+import type {
   Account,
   Activity,
   PortfolioHistory,
@@ -472,6 +476,39 @@ export async function executeAutomationRun(
 export async function cancelAutomationOrder(automationRunId: string, recordId: string) {
   return request<{ record: unknown }>(
     `/execution/runs/${encodeURIComponent(automationRunId)}/orders/${encodeURIComponent(recordId)}/cancel`,
+    { method: 'POST', body: JSON.stringify({}) }
+  );
+}
+
+// ============================================================
+// Stock auto session (Chart & Trade)
+// ============================================================
+
+export async function getActiveStockAutoSession(symbol: string) {
+  return request<{ session: StockAutoSession | null }>(
+    `/stock-auto/active/${encodeURIComponent(symbol)}`
+  );
+}
+
+export async function getStockAutoSession(sessionId: string) {
+  return request<{ session: StockAutoSession }>(
+    `/stock-auto/sessions/${encodeURIComponent(sessionId)}`
+  );
+}
+
+export async function startStockAutoSession(symbol: string, body: StartStockAutoSessionRequest) {
+  return request<{ session: StockAutoSession }>(
+    `/stock-auto/${encodeURIComponent(symbol)}/sessions`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export async function stopStockAutoSession(sessionId: string) {
+  return request<{ session: StockAutoSession }>(
+    `/stock-auto/sessions/${encodeURIComponent(sessionId)}/stop`,
     { method: 'POST', body: JSON.stringify({}) }
   );
 }
