@@ -6,6 +6,7 @@ import {
   startStockAutoSession,
   stopStockAutoSession,
 } from "../services/stockAutoSession/sessionEngine.js";
+import { buildAutoTradeAdvice } from "../services/stockAutoSession/autoTradeAdvisor.js";
 
 const router = express.Router();
 
@@ -27,6 +28,21 @@ router.get("/active/:symbol", (req, res) => {
   res.json({ session });
 });
 
+// POST /api/stock-auto/:symbol/advise
+router.post("/:symbol/advise", async (req, res) => {
+  try {
+    const advice = await buildAutoTradeAdvice({
+      symbol: req.params.symbol,
+      budgetUsd: req.body.budgetUsd,
+      maxLossUsd: req.body.maxLossUsd,
+      profitMinUsd: req.body.profitMinUsd,
+    });
+    res.json({ advice });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+});
+
 // POST /api/stock-auto/:symbol/sessions
 router.post("/:symbol/sessions", async (req, res) => {
   try {
@@ -37,6 +53,8 @@ router.post("/:symbol/sessions", async (req, res) => {
       profitMinUsd: req.body.profitMinUsd,
       intervalMs: req.body.intervalMs ?? 5000,
       usePaperBroker: req.body.usePaperBroker !== false,
+      entryQty: req.body.entryQty,
+      agentAdvice: req.body.agentAdvice,
     });
     res.status(201).json({ session });
   } catch (error) {

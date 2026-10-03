@@ -20,6 +20,7 @@ import type {
   StartStockAutoSessionRequest,
   StockAutoSession,
   StockAutoHistoryResponse,
+  AutoTradeAdvice,
 } from '@/types/stockAutoSession';
 import type {
   Account,
@@ -500,6 +501,19 @@ export async function getStockAutoHistory(symbol: string, limit = 30) {
 export async function getStockAutoSession(sessionId: string) {
   return request<{ session: StockAutoSession }>(
     `/stock-auto/sessions/${encodeURIComponent(sessionId)}`
+  );
+}
+
+export async function fetchAutoTradeAdvice(
+  symbol: string,
+  body: Pick<StartStockAutoSessionRequest, 'budgetUsd' | 'maxLossUsd' | 'profitMinUsd'>
+) {
+  return request<{ advice: AutoTradeAdvice }>(
+    `/stock-auto/${encodeURIComponent(symbol)}/advise`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }
   );
 }
 

@@ -1054,6 +1054,218 @@
       },
       "executedAt": "2026-09-28T17:37:33.406Z",
       "sandbox": true
+    },
+    "auto-1790666518945": {
+      "automationRunId": "auto-1790666518945",
+      "createdAt": "2026-09-29T07:21:58.945Z",
+      "status": "ready",
+      "policyId": "capbac-1790666518920",
+      "capabilityPolicy": {
+        "policyId": "capbac-1790666518920",
+        "createdAt": "2026-09-29T07:21:58.945Z",
+        "strategyId": null,
+        "strategyName": "Find short-term opportunities based on momentum and important news. Prefer liqui",
+        "allowedStocks": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "maxOrderValueUsd": 700,
+        "maxPositionSizeUsd": 700,
+        "dailyTradeLimit": 10,
+        "dailySpendingLimitUsd": 2000,
+        "allowShortSelling": false
+      },
+      "planId": "plan-1790666515660",
+      "strategySummary": "Short-term momentum and news-driven strategy focusing on liquid mega-cap technology and EV equities (AAPL, MSFT, NVDA, TSLA) with clear trend confirmation.",
+      "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+      "budget": 2000,
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSLA"
+      ],
+      "horizon": "days",
+      "plannerSource": "gemini",
+      "plan": {
+        "planId": "plan-1790666515660",
+        "generatedAt": "2026-09-29T07:21:55.660Z",
+        "userStrategy": "Find short-term opportunities based on momentum and important news. Prefer liquid names with clear trend confirmation.",
+        "strategySummary": "Short-term momentum and news-driven strategy focusing on liquid mega-cap technology and EV equities (AAPL, MSFT, NVDA, TSLA) with clear trend confirmation.",
+        "budget": 2000,
+        "currency": "USD",
+        "allowedSymbols": [
+          "AAPL",
+          "MSFT",
+          "NVDA",
+          "TSLA"
+        ],
+        "horizon": "days",
+        "monitoring": [
+          "Track daily volume surges relative to 30-day average volume.",
+          "Monitor real-time financial news for catalyst events, earnings reports, or regulatory updates affecting AAPL, MSFT, NVDA, and TSLA.",
+          "Observe intraday moving average crossovers (e.g., 9 EMA crossing above 21 EMA on 15-minute charts) for trend confirmation."
+        ],
+        "entryConditions": [
+          "Price breaks above key intraday resistance accompanied by above-average volume.",
+          "Positive catalyst or news headline with sustained buying pressure over a 30-minute window.",
+          "RSI between 50 and 70, indicating strong momentum without immediate overbought exhaustion."
+        ],
+        "exitConditions": [
+          "Trailing stop-loss hit at 2% below entry or recent swing low.",
+          "Take-profit reached at a conservative 4% gain from entry.",
+          "Reversal in momentum indicators (e.g., MACD bearish crossover or breakdown below short-term support)."
+        ],
+        "budgetGuidance": {
+          "totalBudget": 2000,
+          "maxPerPositionUsd": 500,
+          "suggestedConcurrentPositions": 3,
+          "reserveCashPct": 25,
+          "notes": "Allocate a maximum of $500 per trade across a maximum of 3 concurrent positions to maintain diversification. Keep at least 25% ($500) in reserve cash to manage volatility and add to winning setups."
+        },
+        "candidateTrades": [
+          {
+            "symbol": "AAPL",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "High liquidity and stable trend characteristics; attractive for momentum plays upon breaking recent intraday highs.",
+            "suggestedNotionalUsd": 500,
+            "entryTriggers": [
+              "Breakout above morning high with volume > 1.5x average.",
+              "Positive product or supply chain news confirmation."
+            ],
+            "exitTriggers": [
+              "Stop-loss at -2.0%",
+              "Take-profit at +4.0%"
+            ]
+          },
+          {
+            "symbol": "MSFT",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Strong institutional backing and news sensitivity regarding enterprise AI developments.",
+            "suggestedNotionalUsd": 500,
+            "entryTriggers": [
+              "Hold above VWAP with rising 15-minute moving averages.",
+              "Positive tech sector sentiment."
+            ],
+            "exitTriggers": [
+              "Stop-loss at -2.0%",
+              "Take-profit at +4.0%"
+            ]
+          },
+          {
+            "symbol": "NVDA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "Exceptional short-term volatility and heavy retail/institutional momentum driven by semiconductor and AI news.",
+            "suggestedNotionalUsd": 500,
+            "entryTriggers": [
+              "High relative volume in the first hour of trading.",
+              "Break of intraday consolidation resistance."
+            ],
+            "exitTriggers": [
+              "Stop-loss at -2.5%",
+              "Take-profit at +5.0%"
+            ]
+          },
+          {
+            "symbol": "TSLA",
+            "side": "buy",
+            "status": "conditional",
+            "rationale": "High beta asset ideal for rapid momentum swings and reaction to breaking macro or company headlines.",
+            "suggestedNotionalUsd": 500,
+            "entryTriggers": [
+              "Clear directional trend established in the first 30 minutes of the session.",
+              "News catalyst involving delivery numbers or regulatory updates."
+            ],
+            "exitTriggers": [
+              "Stop-loss at -2.5%",
+              "Take-profit at +5.0%"
+            ]
+          }
+        ],
+        "noTradeDecision": {
+          "shouldTrade": false,
+          "conditions": [
+            "Broad market indices (S&P 500 / Nasdaq) exhibit high chop with conflicting directionals.",
+            "Lack of clear trend confirmation or volume support across all candidate symbols.",
+            "Conflicting high-impact news that creates unpredictable whipsaws."
+          ],
+          "action": "Remain in cash, hold positions on the watchlist, and wait for clear volume breakouts before executing any paper trades."
+        },
+        "riskNotes": [
+          "Strictly adhere to stop-losses to protect the $2000 total capital base from outsized drawdowns.",
+          "Avoid chasing parabolic moves without consolidation or volume validation.",
+          "This is a simulated paper-trading plan for educational purposes only."
+        ],
+        "assumptions": [
+          "Execution will occur during standard market hours (9:30 AM - 4:00 PM EST).",
+          "Brokerage execution slippage and commissions are negligible for the purpose of this simulation.",
+          "Real-time news feeds and level 1/2 quotes are accessible for trigger validation."
+        ]
+      },
+      "capbac": {
+        "engine": "capbac",
+        "evaluatedAt": "2026-09-29T07:21:58.928Z",
+        "policyId": "capbac-1790666518920",
+        "dailyUsageStart": {
+          "tradeCount": 0,
+          "spendingUsd": 0
+        },
+        "dailyUsageEnd": {
+          "tradeCount": 4,
+          "spendingUsd": 2000
+        },
+        "results": [
+          {
+            "proposalId": "plan-plan-1790666515660-AAPL-0",
+            "symbol": "AAPL",
+            "side": "buy",
+            "notionalUsd": 500,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790666515660-MSFT-1",
+            "symbol": "MSFT",
+            "side": "buy",
+            "notionalUsd": 500,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790666515660-NVDA-2",
+            "symbol": "NVDA",
+            "side": "buy",
+            "notionalUsd": 500,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          },
+          {
+            "proposalId": "plan-plan-1790666515660-TSLA-3",
+            "symbol": "TSLA",
+            "side": "buy",
+            "notionalUsd": 500,
+            "decision": "APPROVED",
+            "violations": [],
+            "reason": "All capability checks passed."
+          }
+        ],
+        "summary": {
+          "total": 4,
+          "approved": 4,
+          "denied": 0
+        }
+      },
+      "executionSummary": null,
+      "executedAt": null,
+      "sandbox": null
     }
   },
   "journals": {
@@ -1264,6 +1476,7 @@
         "sandbox": true,
         "mock": true
       }
-    ]
+    ],
+    "auto-1790666518945": []
   }
 }

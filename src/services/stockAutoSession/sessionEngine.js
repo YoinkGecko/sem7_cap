@@ -126,17 +126,25 @@ async function marketSellAll(session, qty, price) {
   };
 }
 
-async function performInitialMaxBuy(session) {
+async function performInitialBuy(session, qtyOverride) {
   const { price } = await fetchMarketSnapshot(session.symbol);
   if (!price || price <= 0) {
     throw new Error("Unable to get price for initial buy.");
   }
 
-  const qty = Math.floor(session.budgetUsd / price);
-  if (qty < 1) {
+  const maxQty = Math.floor(session.budgetUsd / price);
+  let qty = qtyOverride != null ? Math.floor(Number(qtyOverride)) : maxQty;
+
+  if (maxQty < 1) {
     throw new Error(
       `Budget $${session.budgetUsd} is too small for 1 share at ${price.toFixed(2)}.`
     );
+  }
+  if (!Number.isFinite(qty) || qty < 1) {
+    throw new Error("Invalid entry quantity.");
+  }
+  if (qty > maxQty) {
+    qty = maxQty;
   }
 
   const trade = await marketBuy(session, qty, price);
@@ -147,9 +155,12 @@ async function performInitialMaxBuy(session) {
   session.sessionEntryAvgPrice = price;
   session.sessionTotalCost = totalCost;
   session.tradeCount = 1;
+  const buyReason =
+    session.agentAdvice?.reason ||
+    `Initial buy: ${qty} shares @ ${price.toFixed(2)} ≈ $${totalCost.toFixed(2)}`;
   recordTrade(session, {
     ...trade,
-    reason: `Max budget buy: ${qty} shares @ ${price.toFixed(2)} ≈ $${totalCost.toFixed(2)}`,
+    reason: buyReason,
   });
   session.currentPrice = price;
   session.positionQty = qty;
@@ -186,7 +197,7 @@ export async function processSessionTick(sessionId) {
 
   try {
     if (!session.initialBuyComplete) {
-      await performInitialMaxBuy(session);
+      await performInitialBuy(session);
       return publicSessionView(session);
     }
 
@@ -281,9 +292,13 @@ export async function startStockAutoSession(input) {
   }
 
   const session = storeCreateSession(input);
+  session.agentAdvice = input.agentAdvice || null;
 
   try {
-    await performInitialMaxBuy(session);
+    await performInitialBuy(
+      session,
+      input.entryQty != null ? Math.floor(Number(input.entryQty)) : undefined
+    );
   } catch (e) {
     session.status = "STOPPED";
     session.stopReason = e.message;

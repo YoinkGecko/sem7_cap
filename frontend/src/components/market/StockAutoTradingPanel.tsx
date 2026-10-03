@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bot, Octagon, Play, AlertTriangle, TrendingUp } from 'lucide-react';
 import {
+  fetchAutoTradeAdvice,
   getActiveStockAutoSession,
   getStockAutoSession,
   startStockAutoSession,
   stopStockAutoSession,
   type StockAutoSession,
 } from '@/services/api';
+import type { AutoTradeAdvice } from '@/types/stockAutoSession';
+import { AutoTradeProposalModal } from '@/components/market/AutoTradeProposalModal';
 import { useToast } from '@/components/common/Toast';
 import { Badge, Spinner } from '@/components/common/UI';
 import { Modal } from '@/components/common/Modal';
@@ -40,6 +43,10 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const [advising, setAdvising] = useState(false);
+  const [advice, setAdvice] = useState<AutoTradeAdvice | null>(null);
+  const [confirmingStart, setConfirmingStart] = useState(false);
 
   const refreshSession = useCallback(async (sessionId?: string) => {
     try {
@@ -85,7 +92,6 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
     const budgetUsd = toNum(budget);
     const maxLossUsd = toNum(maxLoss);
     const profitMinUsd = toNum(profitMin);
-    const intervalMs = Math.max(3000, (toNum(intervalSec) ?? 5) * 1000);
 
     if (budgetUsd === undefined || budgetUsd <= 0) {
       notify('error', 'Enter a valid trading budget.');
@@ -100,7 +106,31 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
       return;
     }
 
-    setLoading(true);
+    setProposalOpen(true);
+    setAdvising(true);
+    setAdvice(null);
+    try {
+      const { advice: a } = await fetchAutoTradeAdvice(symbol, {
+        budgetUsd,
+        maxLossUsd,
+        profitMinUsd,
+      });
+      setAdvice(a);
+    } catch (e) {
+      setProposalOpen(false);
+      notify('error', e instanceof Error ? e.message : 'Advisor failed.');
+    } finally {
+      setAdvising(false);
+    }
+  };
+
+  const startSessionWithQty = async (entryQty: number, useAdvice: AutoTradeAdvice | null) => {
+    const budgetUsd = toNum(budget)!;
+    const maxLossUsd = toNum(maxLoss)!;
+    const profitMinUsd = toNum(profitMin)!;
+    const intervalMs = Math.max(3000, (toNum(intervalSec) ?? 5) * 1000);
+
+    setConfirmingStart(true);
     try {
       const { session: s } = await startStockAutoSession(symbol, {
         budgetUsd,
@@ -108,17 +138,18 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
         profitMinUsd,
         intervalMs,
         usePaperBroker: true,
+        entryQty,
+        agentAdvice: useAdvice,
       });
       setSession(s);
+      setProposalOpen(false);
+      setAdvice(null);
       onSessionChange?.();
-      notify(
-        'success',
-        `Bought max shares for ${symbol}. Monitoring P/L every ${intervalSec}s.`
-      );
+      notify('success', `Auto trading started — bought ${entryQty} shares (paper).`);
     } catch (e) {
       notify('error', e instanceof Error ? e.message : 'Failed to start session.');
     } finally {
-      setLoading(false);
+      setConfirmingStart(false);
     }
   };
 
@@ -309,11 +340,11 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
           <button
             type="button"
             onClick={handleStart}
-            disabled={loading || bootstrapping}
+            disabled={loading || bootstrapping || advising}
             className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-violet-600 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
           >
-            {loading ? <Spinner className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            Start — buy max &amp; monitor
+            {advising ? <Spinner className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            Start — analyze &amp; propose
           </button>
         ) : (
           <button
@@ -331,6 +362,22 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
       {session?.lastError && (
         <p className="mt-2 text-xs text-amber-400">Last error: {session.lastError}</p>
       )}
+
+      <AutoTradeProposalModal
+        open={proposalOpen}
+        loading={advising}
+        advice={advice}
+        symbol={symbol}
+        onClose={() => {
+          if (!confirmingStart) {
+            setProposalOpen(false);
+            setAdvice(null);
+          }
+        }}
+        onConfirmSuggested={() => advice && startSessionWithQty(advice.suggestedQty, advice)}
+        onConfirmFullBudget={() => advice && startSessionWithQty(advice.maxQty, advice)}
+        confirming={confirmingStart}
+      />
 
       <Modal
         open={stopConfirmOpen}
