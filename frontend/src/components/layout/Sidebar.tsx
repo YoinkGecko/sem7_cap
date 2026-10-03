@@ -10,6 +10,7 @@ import {
   ChevronRight,
   TrendingUp,
   Bot,
+  Radio,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,6 +21,7 @@ interface SidebarProps {
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/markets', label: 'Markets', icon: CandlestickChart },
+  { to: '/live-trading', label: 'Live Trading', icon: Radio },
   { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { to: '/orders', label: 'Orders', icon: ClipboardList },
   { to: '/watchlists', label: 'Watchlists', icon: Star },

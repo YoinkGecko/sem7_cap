@@ -10,6 +10,8 @@ import { Watchlists } from '@/pages/Watchlists';
 import { Settings } from '@/pages/Settings';
 import { StockAnalysis } from '@/pages/StockAnalysis';
 import { AutomatedTrading } from '@/pages/AutomatedTrading';
+import { MultiStockAutoRunPage } from '@/pages/MultiStockAutoRun';
+import { LiveTrading } from '@/pages/LiveTrading';
 
 function App() {
   return (
@@ -19,11 +21,13 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/markets" element={<Markets />} />
+            <Route path="/markets/multi-auto/:runId" element={<MultiStockAutoRunPage />} />
             <Route path="/markets/:symbol" element={<AssetDetails />} />
             <Route path="/analysis/:symbol" element={<StockAnalysis />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/watchlists" element={<Watchlists />} />
+            <Route path="/live-trading" element={<LiveTrading />} />
             <Route path="/automated-trading" element={<AutomatedTrading />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

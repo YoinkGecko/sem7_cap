@@ -23,6 +23,11 @@ import type {
   AutoTradeAdvice,
 } from '@/types/stockAutoSession';
 import type {
+  MultiStockAutoPreview,
+  MultiStockAutoRun,
+  StartMultiStockAutoRunRequest,
+} from '@/types/multiStockAuto';
+import type {
   Account,
   Activity,
   PortfolioHistory,
@@ -492,6 +497,10 @@ export async function getActiveStockAutoSession(symbol: string) {
   );
 }
 
+export async function listActiveStockAutoSessions() {
+  return request<{ sessions: StockAutoSession[]; count: number }>(`/stock-auto/active`);
+}
+
 export async function getStockAutoHistory(symbol: string, limit = 30) {
   return request<StockAutoHistoryResponse>(
     `/stock-auto/history/${encodeURIComponent(symbol)}${toQuery({ limit })}`
@@ -540,6 +549,36 @@ export async function stopStockAutoSession(
         ...(options?.reason ? { reason: options.reason } : {}),
       }),
     }
+  );
+}
+
+// ============================================================
+// Multi-stock auto (Markets)
+// ============================================================
+
+export async function previewMultiStockAutoRun(body: StartMultiStockAutoRunRequest) {
+  return request<{ preview: MultiStockAutoPreview }>(`/multi-stock-auto/runs/preview`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function startMultiStockAutoRun(body: StartMultiStockAutoRunRequest) {
+  return request<{ run: MultiStockAutoRun }>(`/multi-stock-auto/runs`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getMultiStockAutoRun(runId: string) {
+  return request<{ run: MultiStockAutoRun }>(
+    `/multi-stock-auto/runs/${encodeURIComponent(runId)}`
+  );
+}
+
+export async function listMultiStockAutoRuns(limit = 40) {
+  return request<{ runs: MultiStockAutoRun[] }>(
+    `/multi-stock-auto/runs${toQuery({ limit })}`
   );
 }
 

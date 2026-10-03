@@ -55,6 +55,12 @@ export function findActiveSessionForSymbol(symbol) {
   return null;
 }
 
+export function listActiveSessions() {
+  return Array.from(sessions.values()).filter(
+    (s) => s.status === "RUNNING" && s.initialBuyComplete
+  );
+}
+
 export function createSession(input) {
   const symbol = String(input.symbol || "").trim().toUpperCase();
   const existing = findActiveSessionForSymbol(symbol);

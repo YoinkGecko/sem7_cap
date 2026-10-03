@@ -33,9 +33,15 @@ interface PriceChartProps {
   symbol: string;
   defaultTimeframe?: Timeframe;
   height?: number;
+  showTimeframeSelector?: boolean;
 }
 
-export function PriceChart({ symbol, defaultTimeframe = '1Y', height = 400 }: PriceChartProps) {
+export function PriceChart({
+  symbol,
+  defaultTimeframe = '1Y',
+  height = 400,
+  showTimeframeSelector = true,
+}: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>(defaultTimeframe);
   const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,21 +79,23 @@ export function PriceChart({ symbol, defaultTimeframe = '1Y', height = 400 }: Pr
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-1">
-        {(['1D', '1W', '1M', '3M', '6M', '1Y'] as Timeframe[]).map((tf) => (
-          <button
-            key={tf}
-            onClick={() => setTimeframe(tf)}
-            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
-              timeframe === tf
-                ? 'bg-sky-900/40 text-sky-400'
-                : 'text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300'
-            }`}
-          >
-            {tf}
-          </button>
-        ))}
-      </div>
+      {showTimeframeSelector && (
+        <div className="mb-3 flex items-center gap-1">
+          {(['1D', '1W', '1M', '3M', '6M', '1Y'] as Timeframe[]).map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                timeframe === tf
+                  ? 'bg-sky-900/40 text-sky-400'
+                  : 'text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300'
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
+        </div>
+      )}
       {loading ? (
         <LoadingState text="Loading price data..." />
       ) : error ? (
@@ -98,7 +106,7 @@ export function PriceChart({ symbol, defaultTimeframe = '1Y', height = 400 }: Pr
         <ResponsiveContainer width="100%" height={height}>
           <AreaChart data={chartData}>
             <defs>
-              <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={`priceGrad-${symbol}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
                 <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
@@ -121,7 +129,13 @@ export function PriceChart({ symbol, defaultTimeframe = '1Y', height = 400 }: Pr
               labelStyle={{ color: '#a3a3a3' }}
               formatter={(value) => [fmtCurrency(Number(value)), 'Price']}
             />
-            <Area type="monotone" dataKey="price" stroke="#10b981" strokeWidth={2} fill="url(#priceGrad)" />
+            <Area
+              type="monotone"
+              dataKey="price"
+              stroke="#10b981"
+              strokeWidth={2}
+              fill={`url(#priceGrad-${symbol})`}
+            />
           </AreaChart>
         </ResponsiveContainer>
       )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bot, Octagon, Play, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bot, Octagon, Play, AlertTriangle, TrendingUp, Radio } from 'lucide-react';
 import {
   fetchAutoTradeAdvice,
   getActiveStockAutoSession,
@@ -335,7 +336,7 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {!running ? (
           <button
             type="button"
@@ -347,15 +348,24 @@ export function StockAutoTradingPanel({ symbol, livePrice, onSessionChange }: St
             Start — analyze &amp; propose
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => setStopConfirmOpen(true)}
-            disabled={loading}
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
-          >
-            {loading ? <Spinner className="h-4 w-4" /> : <Octagon className="h-4 w-4" />}
-            Stop monitoring
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setStopConfirmOpen(true)}
+              disabled={loading}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+            >
+              {loading ? <Spinner className="h-4 w-4" /> : <Octagon className="h-4 w-4" />}
+              Stop monitoring
+            </button>
+            <Link
+              to="/live-trading"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-800/70 bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-950/60"
+            >
+              <Radio className="h-4 w-4" />
+              Live trading
+            </Link>
+          </>
         )}
       </div>
 

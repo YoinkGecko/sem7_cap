@@ -14,6 +14,7 @@ import {
   findActiveSessionForSymbol,
   appendTradeHistory,
   listHistoryForSymbol,
+  listActiveSessions,
 } from "./sessionStore.js";
 
 function recordTrade(session, trade) {
@@ -383,4 +384,10 @@ export function getStockAutoSession(sessionId) {
 export function getActiveStockAutoSession(symbol) {
   const s = findActiveSessionForSymbol(symbol);
   return publicSessionView(s);
+}
+
+export function listActiveStockAutoSessions() {
+  return listActiveSessions()
+    .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)))
+    .map((s) => publicSessionView(s));
 }

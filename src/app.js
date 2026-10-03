@@ -13,6 +13,7 @@ import capbacRouter from "./routers/capbac.routes.js";
 import automationRouter from "./routers/automation.routes.js";
 import executionRouter from "./routers/execution.routes.js";
 import stockAutoSessionRouter from "./routers/stockAutoSession.routes.js";
+import multiStockAutoRouter from "./routers/multiStockAuto.routes.js";
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use("/api/capbac", capbacRouter);
 app.use("/api/automation", automationRouter);
 app.use("/api/execution", executionRouter);
 app.use("/api/stock-auto", stockAutoSessionRouter);
+app.use("/api/multi-stock-auto", multiStockAutoRouter);
 
 app.get("/health", (req, res) => {
   res.json({

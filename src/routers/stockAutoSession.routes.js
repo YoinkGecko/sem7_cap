@@ -3,6 +3,7 @@ import {
   getActiveStockAutoSession,
   getStockAutoHistory,
   getStockAutoSession,
+  listActiveStockAutoSessions,
   startStockAutoSession,
   stopStockAutoSession,
 } from "../services/stockAutoSession/sessionEngine.js";
@@ -17,6 +18,16 @@ router.get("/history/:symbol", (req, res) => {
     const data = getStockAutoHistory(req.params.symbol);
     data.sessions = data.sessions.slice(0, limit);
     res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/stock-auto/active — all running sessions (must be before /active/:symbol)
+router.get("/active", (req, res) => {
+  try {
+    const sessions = listActiveStockAutoSessions();
+    res.json({ sessions, count: sessions.length });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
