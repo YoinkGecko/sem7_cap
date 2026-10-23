@@ -2,6 +2,7 @@ import { buildAutoTradeAdvice } from "../stockAutoSession/autoTradeAdvisor.js";
 import {
   getStockAutoSession,
   startStockAutoSession,
+  stopStockAutoSession,
 } from "../stockAutoSession/sessionEngine.js";
 import {
   createRunRecord,
@@ -78,7 +79,7 @@ async function adviseLeg(symbol, budgetUsd, config) {
   return advice;
 }
 
-function summarizeRun(run) {
+export function summarizeRun(run) {
   let startedCount = 0;
   let failedCount = 0;
   let runningCount = 0;
@@ -96,7 +97,9 @@ function summarizeRun(run) {
   }
 
   let status = run.status;
-  if (status !== "PENDING") {
+  if (status === "PROFIT_TARGET_REACHED" || status === "LOSS_LIMIT_REACHED") {
+    /* keep terminal combined-exit status */
+  } else if (status !== "PENDING" && status !== "STARTING") {
     if (failedCount === run.legs.length) status = "FAILED";
     else if (runningCount > 0) status = "RUNNING";
     else status = "COMPLETED";
@@ -137,6 +140,10 @@ function publicRunView(run, { refreshSessions = false } = {}) {
     status: run.status,
     createdAt: run.createdAt,
     completedAt: run.completedAt,
+    stoppedAt: run.stoppedAt,
+    stopSellPosition: run.stopSellPosition,
+    stopReason: run.stopReason,
+    lastCombinedEvaluation: run.lastCombinedEvaluation,
     config: run.config,
     symbols: run.symbols,
     legs: run.legs.map((leg) => ({
@@ -269,6 +276,7 @@ export async function startMultiStockAutoRun(body) {
         usePaperBroker: config.usePaperBroker,
         entryQty,
         agentAdvice: advice,
+        multiRunId: run.runId,
       });
 
       leg.sessionId = session.sessionId;
@@ -290,6 +298,11 @@ export async function startMultiStockAutoRun(body) {
   summarizeRun(run);
   persistRunsToDisk();
 
+  if (run.summary.runningCount > 0) {
+    const { startMultiRunMonitoring } = await import("./runMonitor.js");
+    startMultiRunMonitoring(run.runId);
+  }
+
   return publicRunView(run, { refreshSessions: true });
 }
 
@@ -303,4 +316,59 @@ export function getMultiStockAutoRunHistory(limit = 40) {
   return listRuns(limit).map((run) =>
     publicRunView(run, { refreshSessions: true })
   );
+}
+
+export async function stopMultiStockAutoRun(runId, options = {}) {
+  const sellPosition = options.sellPosition === true;
+  const { stopMultiRunMonitoring } = await import("./runMonitor.js");
+  stopMultiRunMonitoring(runId);
+  const run = getRun(runId);
+  if (!run) {
+    const err = new Error("Run not found.");
+    err.status = 404;
+    throw err;
+  }
+
+  const legResults = [];
+
+  for (const leg of run.legs) {
+    if (!leg.sessionId) continue;
+    const current = getStockAutoSession(leg.sessionId);
+    if (!current || current.status !== "RUNNING") {
+      leg.sessionSnapshot = current;
+      leg.liveStatus = current?.status ?? leg.liveStatus;
+      continue;
+    }
+
+    try {
+      const stopped = await stopStockAutoSession(leg.sessionId, {
+        sellPosition,
+        reason: sellPosition
+          ? "Multi agent stopped by user — sold session shares"
+          : "Multi agent stopped by user — kept shares",
+      });
+      leg.sessionSnapshot = stopped;
+      leg.liveStatus = stopped.status;
+      legResults.push({ symbol: leg.symbol, sessionId: leg.sessionId, ok: true });
+    } catch (e) {
+      legResults.push({
+        symbol: leg.symbol,
+        sessionId: leg.sessionId,
+        ok: false,
+        error: e.message,
+      });
+    }
+  }
+
+  run.stoppedAt = new Date().toISOString();
+  run.stopSellPosition = sellPosition;
+  run.stopReason = sellPosition
+    ? "Stopped by user — sold all session positions"
+    : "Stopped by user — kept all session positions";
+  run.completedAt = run.completedAt || run.stoppedAt;
+  summarizeRun(run);
+  updateRun(run.runId, run);
+
+  const view = publicRunView(run, { refreshSessions: true });
+  return { run: view, legResults };
 }

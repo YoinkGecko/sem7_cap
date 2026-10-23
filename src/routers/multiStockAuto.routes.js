@@ -1,9 +1,11 @@
 import express from "express";
+import "../services/multiStockAuto/runMonitor.js";
 import {
   getMultiStockAutoRun,
   getMultiStockAutoRunHistory,
   previewMultiStockAutoRun,
   startMultiStockAutoRun,
+  stopMultiStockAutoRun,
 } from "../services/multiStockAuto/runEngine.js";
 
 const router = express.Router();
@@ -44,6 +46,18 @@ router.post("/runs", async (req, res) => {
   try {
     const run = await startMultiStockAutoRun(req.body);
     res.status(201).json({ run });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+});
+
+// POST /api/multi-stock-auto/runs/:runId/stop
+router.post("/runs/:runId/stop", async (req, res) => {
+  try {
+    const payload = await stopMultiStockAutoRun(req.params.runId, {
+      sellPosition: req.body?.sellPosition === true,
+    });
+    res.json(payload);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });
   }

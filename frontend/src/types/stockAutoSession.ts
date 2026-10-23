@@ -45,6 +45,7 @@ export interface StockAutoSession {
   lossLimitTriggered?: boolean;
   profitTargetReached?: boolean;
   tickLog?: { at: string; message: string }[];
+  multiRunId?: string | null;
 }
 
 export interface StartStockAutoSessionRequest {

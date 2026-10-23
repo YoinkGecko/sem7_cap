@@ -43,6 +43,16 @@ export interface MultiStockAutoRun {
   status: string;
   createdAt: string;
   completedAt?: string | null;
+  stoppedAt?: string | null;
+  stopSellPosition?: boolean | null;
+  stopReason?: string | null;
+  lastCombinedEvaluation?: {
+    action?: string | null;
+    reason?: string;
+    aggregatePnL?: number;
+    evaluatedAt?: string;
+    exitType?: string;
+  } | null;
   config: MultiStockAutoRunConfig;
   symbols: string[];
   legs: MultiStockAutoLeg[];

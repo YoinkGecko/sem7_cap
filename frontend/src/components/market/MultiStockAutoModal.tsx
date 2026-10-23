@@ -147,8 +147,8 @@ export function MultiStockAutoModal({ open, symbols, onClose, onStarted }: Multi
       <div className="space-y-4 text-sm">
         <p className="text-neutral-400">
           One <span className="text-neutral-200">total budget</span> is split evenly across selected
-          stocks. Each symbol gets its own analysis, sized entry within its slice, then profit/loss
-          monitoring (paper).
+          stocks. Profit and loss exits use <span className="text-neutral-200">combined basket P/L</span>{' '}
+          across all legs — when the total hits your targets, every position is sold (paper).
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -169,11 +169,11 @@ export function MultiStockAutoModal({ open, symbols, onClose, onStarted }: Multi
             />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">Max loss per stock ($)</span>
+            <span className="text-xs text-neutral-500">Combined max loss ($)</span>
             <input className={inputClass} value={maxLoss} onChange={(e) => setMaxLoss(e.target.value)} />
           </label>
           <label className="block">
-            <span className="text-xs text-neutral-500">Min profit per stock ($)</span>
+            <span className="text-xs text-neutral-500">Combined min profit ($)</span>
             <input className={inputClass} value={profitMin} onChange={(e) => setProfitMin(e.target.value)} />
           </label>
         </div>

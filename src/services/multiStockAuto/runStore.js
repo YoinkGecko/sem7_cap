@@ -8,6 +8,8 @@ const DATA_FILE = path.join(__dirname, "../../../data/multi-stock-auto-runs.json
 
 /** @type {Map<string, object>} */
 const runs = new Map();
+/** @type {Map<string, NodeJS.Timeout>} */
+const runTimers = new Map();
 
 function loadFromDisk() {
   try {
@@ -77,4 +79,25 @@ export function listRuns(limit = 50) {
   return Array.from(runs.values())
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .slice(0, limit);
+}
+
+export function stopRunMonitorLoop(runId) {
+  const t = runTimers.get(runId);
+  if (t) {
+    clearInterval(t);
+    runTimers.delete(runId);
+  }
+}
+
+export function startRunMonitorLoop(runId, tickFn) {
+  stopRunMonitorLoop(runId);
+  const run = runs.get(runId);
+  if (!run || run.status !== "RUNNING") return;
+
+  const ms = Math.max(3000, run.config?.intervalMs || 5000);
+  tickFn(runId).catch(() => {});
+  const id = setInterval(() => {
+    tickFn(runId).catch(() => {});
+  }, ms);
+  runTimers.set(runId, id);
 }

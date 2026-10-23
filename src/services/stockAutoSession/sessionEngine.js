@@ -77,6 +77,7 @@ function publicSessionView(session) {
     finalPnL: session.finalPnL,
     tradeHistory: session.tradeHistory || [],
     tickLog: session.tickLog || [],
+    multiRunId: session.multiRunId || null,
   };
 }
 
@@ -218,6 +219,22 @@ export async function processSessionTick(sessionId) {
 
     const sellQty = session.sessionEntryQty || session.positionQty;
 
+    if (session.multiRunId) {
+      session.lastEvaluation = {
+        action: null,
+        reason: `Multi-run leg · P/L ${session.runningPnL.toFixed(2)} (combined basket exit)`,
+        evaluatedAt: new Date().toISOString(),
+      };
+      appendTickLog(session, {
+        at: new Date().toISOString(),
+        message: `Price ${price?.toFixed(2)} · leg P/L ${session.runningPnL.toFixed(2)}`,
+      });
+      session.lastTickAt = new Date().toISOString();
+      session.lastError = null;
+      updateSession(sessionId, session);
+      return publicSessionView(session);
+    }
+
     const exit = evaluateProfitLossExit({
       sessionPnL: session.runningPnL,
       maxLossUsd: session.maxLossUsd,
@@ -294,6 +311,9 @@ export async function startStockAutoSession(input) {
 
   const session = storeCreateSession(input);
   session.agentAdvice = input.agentAdvice || null;
+  if (input.multiRunId) {
+    session.multiRunId = input.multiRunId;
+  }
 
   try {
     await performInitialBuy(
@@ -308,7 +328,89 @@ export async function startStockAutoSession(input) {
     throw e;
   }
 
-  startSessionLoop(session.sessionId, processSessionTick);
+  if (!session.multiRunId) {
+    startSessionLoop(session.sessionId, processSessionTick);
+  }
+  return publicSessionView(session);
+}
+
+/** Refresh price/P/L for a running session (used by multi-stock combined monitor). */
+export async function refreshSessionMarketState(sessionId) {
+  const session = getSession(sessionId);
+  if (!session || session.status !== "RUNNING" || !session.initialBuyComplete) {
+    return publicSessionView(session);
+  }
+
+  try {
+    const { price } = await fetchMarketSnapshot(session.symbol);
+    const position = await fetchPositionForSymbol(session.symbol);
+
+    session.ticks = (session.ticks || 0) + 1;
+    session.currentPrice = price;
+    session.positionQty = position?.qty ?? session.sessionEntryQty ?? 0;
+    session.positionMarketValue =
+      position?.market_value ??
+      (price && session.sessionEntryQty ? price * session.sessionEntryQty : 0);
+    session.positionAvgEntry =
+      position?.avg_entry_price ?? session.sessionEntryAvgPrice;
+
+    session.runningPnL = computeSessionPnL(session, price);
+    session.unrealizedPnL = session.runningPnL;
+    session.lastTickAt = new Date().toISOString();
+    session.lastError = null;
+    updateSession(sessionId, session);
+  } catch (e) {
+    session.lastError = e.message;
+    session.lastTickAt = new Date().toISOString();
+    updateSession(sessionId, session);
+  }
+
+  return publicSessionView(session);
+}
+
+/** Market-sell and close a running session (combined multi-run exit). */
+export async function exitRunningSession(sessionId, { reason, exitType }) {
+  const session = getSession(sessionId);
+  if (!session || session.status !== "RUNNING") {
+    return publicSessionView(session);
+  }
+
+  stopSessionLoop(sessionId);
+
+  const sellQty = session.sessionEntryQty || session.positionQty || 0;
+  const status =
+    exitType === "profit" ? "PROFIT_TARGET_REACHED" : "LOSS_LIMIT_REACHED";
+
+  try {
+    const { price } = await fetchMarketSnapshot(session.symbol);
+    session.currentPrice = price;
+    session.runningPnL = computeSessionPnL(session, price);
+
+    if (sellQty > 0) {
+      const closeTrade = await marketSellAll(session, sellQty, price);
+      if (closeTrade) {
+        session.tradeCount += 1;
+        if (session.sessionEntryAvgPrice && closeTrade.price) {
+          session.runningPnL =
+            (closeTrade.price - session.sessionEntryAvgPrice) * closeTrade.qty;
+        }
+        recordTrade(session, { ...closeTrade, reason });
+      }
+    }
+
+    appendTickLog(session, {
+      at: new Date().toISOString(),
+      message: reason,
+    });
+    await finalizeStop(session, status, reason);
+  } catch (e) {
+    session.lastError = e.message;
+    session.status = "STOPPED";
+    session.stopReason = `${reason} (exit failed: ${e.message})`;
+    session.stoppedAt = new Date().toISOString();
+    updateSession(sessionId, session);
+  }
+
   return publicSessionView(session);
 }
 

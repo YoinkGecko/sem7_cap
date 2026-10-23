@@ -582,6 +582,19 @@ export async function listMultiStockAutoRuns(limit = 40) {
   );
 }
 
+export async function stopMultiStockAutoRun(
+  runId: string,
+  options: { sellPosition: boolean }
+) {
+  return request<{ run: MultiStockAutoRun; legResults: { symbol: string; ok: boolean; error?: string }[] }>(
+    `/multi-stock-auto/runs/${encodeURIComponent(runId)}/stop`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ sellPosition: options.sellPosition }),
+    }
+  );
+}
+
 // ============================================================
 // Helpers
 // ============================================================

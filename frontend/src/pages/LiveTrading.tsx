@@ -9,18 +9,33 @@ import { fmtCurrency, fmtInt, fmtSignedCurrency, pctColor } from '@/utils/format
 
 const POLL_MS = 5000;
 
-function progressToTarget(session: StockAutoSession) {
-  const pl = session.runningPnL ?? 0;
-  const profit = session.profitMinUsd ?? 1;
-  const loss = session.maxLossUsd ?? 1;
+function progressToTarget(pl: number, profit: number, loss: number) {
   if (pl >= 0) return Math.min(100, (pl / profit) * 100);
   return Math.min(100, (Math.abs(pl) / loss) * 100);
 }
 
-function LiveStockCard({ session }: { session: StockAutoSession }) {
-  const pl = session.runningPnL ?? 0;
+function LiveStockCard({
+  session,
+  combinedPl,
+  combinedProfitTarget,
+  combinedLossLimit,
+}: {
+  session: StockAutoSession;
+  combinedPl?: number;
+  combinedProfitTarget?: number;
+  combinedLossLimit?: number;
+}) {
+  const legPl = session.runningPnL ?? 0;
+  const useCombined =
+    session.multiRunId &&
+    combinedPl != null &&
+    combinedProfitTarget != null &&
+    combinedLossLimit != null;
+  const pl = useCombined ? combinedPl : legPl;
+  const profit = useCombined ? combinedProfitTarget : session.profitMinUsd ?? 1;
+  const loss = useCombined ? combinedLossLimit : session.maxLossUsd ?? 1;
   const toward = pl >= 0 ? 'profit' : 'loss';
-  const pct = progressToTarget(session);
+  const pct = progressToTarget(pl, profit, loss);
 
   return (
     <div className="flex flex-col rounded-lg border border-neutral-800 bg-neutral-900/40 overflow-hidden">
@@ -30,13 +45,20 @@ function LiveStockCard({ session }: { session: StockAutoSession }) {
             {session.symbol}
           </Link>
           <p className="mt-0.5 text-xs text-neutral-500">
-            {fmtInt(session.sessionEntryQty)} sh @ {fmtCurrency(session.sessionEntryAvgPrice)} · target +$
-            {session.profitMinUsd} / stop −${session.maxLossUsd}
+            {fmtInt(session.sessionEntryQty)} sh @ {fmtCurrency(session.sessionEntryAvgPrice)}
+            {session.multiRunId
+              ? ' · exits on combined basket P/L'
+              : ` · target +$${session.profitMinUsd} / stop −$${session.maxLossUsd}`}
           </p>
         </div>
         <div className="text-right">
-          <div className={`text-sm font-semibold tabular-nums ${pctColor(pl)}`}>
-            {fmtSignedCurrency(pl)}
+          <div className={`text-sm font-semibold tabular-nums ${pctColor(legPl)}`}>
+            {fmtSignedCurrency(legPl)}
+            {useCombined && (
+              <span className="ml-1 text-xs font-normal text-neutral-500">
+                (basket {fmtSignedCurrency(combinedPl!)})
+              </span>
+            )}
           </div>
           <div className="text-xs text-neutral-500">{fmtCurrency(session.currentPrice)}</div>
         </div>
@@ -53,8 +75,11 @@ function LiveStockCard({ session }: { session: StockAutoSession }) {
             style={{ width: `${pct}%` }}
           />
         </div>
-        {session.lastEvaluation?.reason && (
-          <p className="mt-2 text-xs text-neutral-400 line-clamp-2">{session.lastEvaluation.reason}</p>
+        {(session.lastEvaluation?.reason || (useCombined && combinedPl != null)) && (
+          <p className="mt-2 text-xs text-neutral-400 line-clamp-2">
+            {session.lastEvaluation?.reason ||
+              `Combined basket P/L ${combinedPl!.toFixed(2)} (target +$${profit}, stop −$${loss})`}
+          </p>
         )}
       </div>
 
@@ -76,6 +101,10 @@ export function LiveTrading() {
   const [sessions, setSessions] = useState<StockAutoSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [runLabel, setRunLabel] = useState<string | null>(null);
+  const [combinedTargets, setCombinedTargets] = useState<{
+    profitMinUsd: number;
+    maxLossUsd: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -91,8 +120,13 @@ export function LiveTrading() {
         );
         filtered = active.filter((s) => ids.has(s.sessionId));
         setRunLabel(runPayload.run.symbols.join(', '));
+        setCombinedTargets({
+          profitMinUsd: runPayload.run.config.profitMinUsd,
+          maxLossUsd: runPayload.run.config.maxLossUsd,
+        });
       } else {
         setRunLabel(null);
+        setCombinedTargets(null);
       }
 
       setSessions(filtered);
@@ -117,6 +151,15 @@ export function LiveTrading() {
     () => sessions.reduce((sum, s) => sum + (s.runningPnL ?? 0), 0),
     [sessions]
   );
+
+  const basketPlByRunId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of sessions) {
+      if (!s.multiRunId) continue;
+      map.set(s.multiRunId, (map.get(s.multiRunId) ?? 0) + (s.runningPnL ?? 0));
+    }
+    return map;
+  }, [sessions]);
 
   const activity = useMemo(() => {
     const rows: { at: string; symbol: string; message: string }[] = [];
@@ -182,9 +225,27 @@ export function LiveTrading() {
       ) : (
         <>
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {sessions.map((session) => (
-              <LiveStockCard key={session.sessionId} session={session} />
-            ))}
+            {sessions.map((session) => {
+              const basketPl =
+                runIdFilter && combinedTargets
+                  ? aggregatePnL
+                  : session.multiRunId
+                    ? basketPlByRunId.get(session.multiRunId)
+                    : undefined;
+              return (
+                <LiveStockCard
+                  key={session.sessionId}
+                  session={session}
+                  combinedPl={basketPl}
+                  combinedProfitTarget={
+                    combinedTargets?.profitMinUsd ?? (session.multiRunId ? session.profitMinUsd : undefined)
+                  }
+                  combinedLossLimit={
+                    combinedTargets?.maxLossUsd ?? (session.multiRunId ? session.maxLossUsd : undefined)
+                  }
+                />
+              );
+            })}
           </div>
 
           <section className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-4">

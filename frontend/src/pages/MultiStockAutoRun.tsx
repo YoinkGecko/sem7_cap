@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronUp, History, Radio } from 'lucide-react';
-import { getMultiStockAutoRun, listMultiStockAutoRuns } from '@/services/api';
+import { ChevronDown, ChevronUp, History, Octagon, Radio } from 'lucide-react';
+import { getMultiStockAutoRun, listMultiStockAutoRuns, stopMultiStockAutoRun } from '@/services/api';
 import type { MultiStockAutoLeg, MultiStockAutoRun } from '@/types/multiStockAuto';
+import { MultiStockStopConfirmModal } from '@/components/market/MultiStockStopConfirmModal';
+import { useToast } from '@/components/common/Toast';
 import { Badge, LoadingState, Spinner } from '@/components/common/UI';
 import { fmtCurrency, fmtInt, fmtPercent, fmtSignedCurrency, pctColor } from '@/utils/format';
 
@@ -145,10 +147,13 @@ function LegAnalysisPanel({ leg }: { leg: MultiStockAutoLeg }) {
 export function MultiStockAutoRunPage() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
+  const { notify } = useToast();
   const [run, setRun] = useState<MultiStockAutoRun | null>(null);
   const [history, setHistory] = useState<MultiStockAutoRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
+  const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [stopping, setStopping] = useState(false);
 
   const load = useCallback(async () => {
     if (!runId) return;
@@ -184,6 +189,27 @@ export function MultiStockAutoRunPage() {
 
   const boughtLegs = useMemo(() => (run?.legs.filter(legBought) || []), [run]);
   const activeLeg = run?.legs.find((l) => l.symbol === activeSymbol) ?? null;
+
+  const handleStopMulti = async (sellPosition: boolean) => {
+    if (!runId) return;
+    setStopping(true);
+    try {
+      const { run: updated } = await stopMultiStockAutoRun(runId, { sellPosition });
+      setRun(updated);
+      setStopModalOpen(false);
+      notify(
+        'success',
+        sellPosition
+          ? 'Multi agent stopped — all session shares sold (paper).'
+          : 'Multi agent stopped — shares kept in your paper account.'
+      );
+      await load();
+    } catch (e) {
+      notify('error', e instanceof Error ? e.message : 'Failed to stop multi agent.');
+    } finally {
+      setStopping(false);
+    }
+  };
 
   if (loading) return <LoadingState text="Loading multi-stock auto run…" />;
 
@@ -256,14 +282,39 @@ export function MultiStockAutoRunPage() {
             <div className={pctColor(run.summary.aggregatePnLUsd)}>
               Combined P/L {fmtSignedCurrency(run.summary.aggregatePnLUsd)}
             </div>
+            <div className="mt-1 text-neutral-500">
+              Combined exit: +{fmtCurrency(run.config.profitMinUsd)} profit / −
+              {fmtCurrency(run.config.maxLossUsd)} loss
+            </div>
+            {run.lastCombinedEvaluation?.reason && (
+              <p className="mt-1 max-w-xs text-left text-neutral-500 line-clamp-2">
+                {run.lastCombinedEvaluation.reason}
+              </p>
+            )}
             {run.summary.runningCount > 0 && (
-              <Link
-                to={`/live-trading?runId=${run.runId}`}
-                className="mt-2 inline-flex items-center gap-1 rounded-md border border-emerald-800/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-950/50"
-              >
-                <Radio className="h-3.5 w-3.5" />
-                Live trading
-              </Link>
+              <div className="mt-2 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStopModalOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                >
+                  <Octagon className="h-3.5 w-3.5" />
+                  Stop multi agent
+                </button>
+                <Link
+                  to={`/live-trading?runId=${run.runId}`}
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-800/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-950/50"
+                >
+                  <Radio className="h-3.5 w-3.5" />
+                  Live trading
+                </Link>
+              </div>
+            )}
+            {run.stoppedAt && (
+              <p className="mt-2 text-xs text-neutral-500">
+                Stopped {new Date(run.stoppedAt).toLocaleString()}
+                {run.stopReason ? ` · ${run.stopReason}` : ''}
+              </p>
             )}
           </div>
         </div>
@@ -312,6 +363,15 @@ export function MultiStockAutoRunPage() {
         ) : (
           <p className="text-sm text-neutral-500">Select a symbol above to view analysis and fills.</p>
         )}
+
+        <MultiStockStopConfirmModal
+          open={stopModalOpen}
+          legs={boughtLegs}
+          stopping={stopping}
+          onClose={() => !stopping && setStopModalOpen(false)}
+          onStopKeep={() => handleStopMulti(false)}
+          onStopSellAll={() => handleStopMulti(true)}
+        />
       </div>
     </div>
   );

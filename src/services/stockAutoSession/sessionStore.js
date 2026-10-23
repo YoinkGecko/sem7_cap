@@ -107,6 +107,7 @@ export function createSession(input) {
     tradeHistory: [],
     finalPnL: null,
     tickLog: [],
+    multiRunId: input.multiRunId || null,
   };
 
   sessions.set(sessionId, session);
